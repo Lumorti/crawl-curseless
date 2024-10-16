@@ -18,6 +18,7 @@
 #define _LIBUNIX_IMPLEMENTATION
 #include "libunix.h"
 
+#include <iostream>
 #include <cassert>
 #include <cctype>
 #include <clocale>
@@ -55,20 +56,26 @@ static struct termios game_term;
 #define HEADLESS_LINES 24
 #define HEADLESS_COLS 80
 
+// TODO1
+#define cchar_t char32_t
+std::vector<std::vector<cchar_t>> screenArray;
+int curX = 1;
+int curY = 1;
+
 // for some reason we use 1 indexing internally
 static int headless_x = 1;
 static int headless_y = 1;
 
 // Its best if curses comes at the end (name conflicts with Solaris). -- bwr
-#ifndef CURSES_INCLUDE_FILE
-    #ifndef _XOPEN_SOURCE_EXTENDED
-    #define _XOPEN_SOURCE_EXTENDED
-    #endif
+//#ifndef CURSES_INCLUDE_FILE
+    //#ifndef _XOPEN_SOURCE_EXTENDED
+    //#define _XOPEN_SOURCE_EXTENDED
+    //#endif
 
-    #include <curses.h>
-#else
-    #include CURSES_INCLUDE_FILE
-#endif
+    //#include <curses.h>
+//#else
+    //#include CURSES_INCLUDE_FILE
+//#endif
 
 static bool _headless_mode = false;
 bool in_headless_mode() { return _headless_mode; }
@@ -90,7 +97,7 @@ static COLOURS BG_COL_DEFAULT = BLACK;
 
 struct curses_style
 {
-    attr_t attr;
+    //attr_t attr;
     short color_pair;
 };
 
@@ -332,58 +339,58 @@ static bool cursor_is_enabled = true;
 
 static unsigned int convert_to_curses_style(int chattr)
 {
-    switch (chattr & CHATTR_ATTRMASK)
-    {
-    case CHATTR_STANDOUT:       return WA_STANDOUT;
-    case CHATTR_BOLD:           return WA_BOLD;
-    case CHATTR_BLINK:          return WA_BLINK;
-    case CHATTR_UNDERLINE:      return WA_UNDERLINE;
-    case CHATTR_DIM:            return WA_DIM;
-    default:                    return WA_NORMAL;
-    }
+    //switch (chattr & CHATTR_ATTRMASK)
+    //{
+    //case CHATTR_STANDOUT:       return WA_STANDOUT;
+    //case CHATTR_BOLD:           return WA_BOLD;
+    //case CHATTR_BLINK:          return WA_BLINK;
+    //case CHATTR_UNDERLINE:      return WA_UNDERLINE;
+    //case CHATTR_DIM:            return WA_DIM;
+    //default:                    return WA_NORMAL;
+    //}
 }
 
 // see declaration
-static short translate_colour(COLOURS col)
-{
-    switch (col)
-    {
-    case BLACK:
-        return COLOR_BLACK;
-    case BLUE:
-        return COLOR_BLUE;
-    case GREEN:
-        return COLOR_GREEN;
-    case CYAN:
-        return COLOR_CYAN;
-    case RED:
-        return COLOR_RED;
-    case MAGENTA:
-        return COLOR_MAGENTA;
-    case BROWN:
-        return COLOR_YELLOW;
-    case LIGHTGREY:
-        return COLOR_WHITE;
-    case DARKGREY:
-        return COLOR_BLACK | COLFLAG_CURSES_BRIGHTEN;
-    case LIGHTBLUE:
-        return COLOR_BLUE | COLFLAG_CURSES_BRIGHTEN;
-    case LIGHTGREEN:
-        return COLOR_GREEN | COLFLAG_CURSES_BRIGHTEN;
-    case LIGHTCYAN:
-        return COLOR_CYAN | COLFLAG_CURSES_BRIGHTEN;
-    case LIGHTRED:
-        return COLOR_RED | COLFLAG_CURSES_BRIGHTEN;
-    case LIGHTMAGENTA:
-        return COLOR_MAGENTA | COLFLAG_CURSES_BRIGHTEN;
-    case YELLOW:
-        return COLOR_YELLOW | COLFLAG_CURSES_BRIGHTEN;
-    case WHITE:
-        return COLOR_WHITE | COLFLAG_CURSES_BRIGHTEN;
-    default:
-        return COLOR_GREEN;
-    }
-}
+//static short translate_colour(COLOURS col)
+//{
+    //switch (col)
+    //{
+    //case BLACK:
+        //return COLOR_BLACK;
+    //case BLUE:
+        //return COLOR_BLUE;
+    //case GREEN:
+        //return COLOR_GREEN;
+    //case CYAN:
+        //return COLOR_CYAN;
+    //case RED:
+        //return COLOR_RED;
+    //case MAGENTA:
+        //return COLOR_MAGENTA;
+    //case BROWN:
+        //return COLOR_YELLOW;
+    //case LIGHTGREY:
+        //return COLOR_WHITE;
+    //case DARKGREY:
+        //return COLOR_BLACK | COLFLAG_CURSES_BRIGHTEN;
+    //case LIGHTBLUE:
+        //return COLOR_BLUE | COLFLAG_CURSES_BRIGHTEN;
+    //case LIGHTGREEN:
+        //return COLOR_GREEN | COLFLAG_CURSES_BRIGHTEN;
+    //case LIGHTCYAN:
+        //return COLOR_CYAN | COLFLAG_CURSES_BRIGHTEN;
+    //case LIGHTRED:
+        //return COLOR_RED | COLFLAG_CURSES_BRIGHTEN;
+    //case LIGHTMAGENTA:
+        //return COLOR_MAGENTA | COLFLAG_CURSES_BRIGHTEN;
+    //case YELLOW:
+        //return COLOR_YELLOW | COLFLAG_CURSES_BRIGHTEN;
+    //case WHITE:
+        //return COLOR_WHITE | COLFLAG_CURSES_BRIGHTEN;
+    //default:
+        //return COLOR_GREEN;
+    //}
+//}
 
 /**
  * @internal
@@ -412,21 +419,21 @@ static void setup_colour_pairs()
     // The init_pair routine accepts negative values of foreground and
     // background color to support the use_default_colors extension, but only
     // if that routine has been first invoked.
-    if (Options.use_terminal_default_colours)
-        use_default_colors();
+    //if (Options.use_terminal_default_colours)
+        //use_default_colors();
 
-    // Only generate pairs which we may need.
-    short num_colors = curs_palette_size();
+    //// Only generate pairs which we may need.
+    //short num_colors = curs_palette_size();
 
-    for (short i = 0; i < num_colors; i++)
-    {
-        for (short j = 0; j < num_colors; j++)
-        {
-            short pair = curs_calc_pair_safe(j, i, COLOR_WHITE, COLOR_BLACK);
-            if (pair > 0)
-                init_pair_safe(pair, j, i);
-        }
-    }
+    //for (short i = 0; i < num_colors; i++)
+    //{
+        //for (short j = 0; j < num_colors; j++)
+        //{
+            //short pair = curs_calc_pair_safe(j, i, COLOR_WHITE, COLOR_BLACK);
+            //if (pair > 0)
+                //init_pair_safe(pair, j, i);
+        //}
+    //}
 }
 
 static void unix_handle_terminal_resize();
@@ -506,44 +513,90 @@ static int pending = 0;
 
 static int _get_key_from_curses()
 {
-#ifdef WATCHDOG
-    // If we have (or wait for) actual keyboard input, it's not an infinite
-    // loop.
-    watchdog();
-#endif
+//#ifdef WATCHDOG
+    //// If we have (or wait for) actual keyboard input, it's not an infinite
+    //// loop.
+    //watchdog();
+//#endif
 
-    if (pending)
-    {
-        int c = pending;
-        pending = 0;
-        return c;
-    }
+    //if (pending)
+    //{
+        //int c = pending;
+        //pending = 0;
+        //return c;
+    //}
 
-    wint_t c;
+    //wint_t c;
 
-#ifdef USE_TILE_WEB
-    refresh();
+//#ifdef USE_TILE_WEB
+    //refresh();
 
-    tiles.redraw();
-    tiles.await_input(c, true);
+    //tiles.redraw();
+    //tiles.await_input(c, true);
 
-    if (c != 0)
-        return c;
-#endif
+    //if (c != 0)
+        //return c;
+//#endif
 
-    switch (get_wch(&c))
-    {
-    case ERR:
-        // getch() returns -1 on EOF, convert that into an Escape. Evil hack,
-        // but the alternative is to explicitly check for -1 everywhere where
-        // we might otherwise spin in a tight keyboard input loop.
+    //switch (get_wch(&c))
+    //{
+    //case ERR:
+        //// getch() returns -1 on EOF, convert that into an Escape. Evil hack,
+        //// but the alternative is to explicitly check for -1 everywhere where
+        //// we might otherwise spin in a tight keyboard input loop.
+        //return ESCAPE;
+    //case OK:
+        //// a normal (printable) key
+        //return c;
+    //}
+
+    //return -c;
+
+    std::string str;
+    std::getline(std::cin, str);
+    //switch (str)
+    //{
+        //case "up":
+            //return CK_UP;
+        //case "left":
+            //return CK_LEFT;
+        //case "down":
+            //return CK_DOWN;
+        //case "right":
+            //return CK_RIGHT;
+        //case "backspace":
+            //return CK_BKSP;
+        //case "delete":
+            //return CK_DELETE;
+        //case "space":
+            //return CK_SPACE;
+        //case "escape":
+            //return ESCAPE;
+        //case "enter":
+            //return CK
+        //default:
+            //return str[0];
+    //}
+    if (str == "up") {
+        return CK_UP;
+    } else if (str == "left") {
+        return CK_LEFT;
+    } else if (str == "down") {
+        return CK_DOWN;
+    } else if (str == "right") {
+        return CK_RIGHT;
+    } else if (str == "backspace") {
+        return CK_BKSP;
+    } else if (str == "delete") {
+        return CK_DELETE;
+    } else if (str == "escape") {
         return ESCAPE;
-    case OK:
-        // a normal (printable) key
-        return c;
+    } else if (str == "enter") {
+        return CK_ENTER;
+    } else {
+        return str[0];
     }
 
-    return -c;
 }
 
 #if defined(KEY_RESIZE) || defined(USE_UNIX_SIGNALS)
@@ -608,105 +661,112 @@ static int _headless_getch_ck()
 
 int getch_ck()
 {
-    if (_headless_mode)
-        return _headless_getch_ck();
+    int c = _get_key_from_curses();
+    return c;
 
-    while (true)
-    {
-        int c = _get_key_from_curses();
+//#ifdef KEY_RESIZE
+        //case KEY_RESIZE:    return CK_RESIZE;
+//#endif
 
-#ifdef NCURSES_MOUSE_VERSION
-        if (c == -KEY_MOUSE)
-        {
-            MEVENT me;
-            getmouse(&me);
-            c = proc_mouse_event(c, &me);
+    //if (_headless_mode)
+        //return _headless_getch_ck();
 
-            if (!crawl_state.mouse_enabled)
-                continue;
-        }
-#endif
+    //while (true)
+    //{
+        //int c = _get_key_from_curses();
 
-#ifdef KEY_RESIZE
-        if (c == -KEY_RESIZE)
-        {
-            unix_handle_resize_event();
+//#ifdef NCURSES_MOUSE_VERSION
+        //if (c == -KEY_MOUSE)
+        //{
+            //MEVENT me;
+            //getmouse(&me);
+            //c = proc_mouse_event(c, &me);
 
-            // XXX: Before ncurses get_wch() returns KEY_RESIZE, it
-            // updates LINES and COLS to the new window size. The resize
-            // handler will only redraw the whole screen if the main view
-            // is being shown, for slightly insane reasons, which results
-            // in crawl_view.termsz being out of sync.
-            //
-            // This causes crashiness: e.g. in a menu, make the window taller,
-            // then scroll down one line. To fix this, we always sync termsz:
-            crawl_view.init_geometry();
+            //if (!crawl_state.mouse_enabled)
+                //continue;
+        //}
+//#endif
 
-            if (!getch_returns_resizes)
-                continue;
-        }
-#endif
+//#ifdef KEY_RESIZE
+        //if (c == -KEY_RESIZE)
+        //{
+            //unix_handle_resize_event();
 
-        switch (-c)
-        {
-        case 127:
-        // 127 is ASCII DEL, which some terminals (all mac, some linux) use for
-        // the backspace key. ncurses does not typically map this to
-        // KEY_BACKSPACE (though this may depend on TERM settings?). '\b' (^H)
-        // in contrast should be handled automatically. Note that ASCII DEL
-        // is distinct from the standard esc code for del, esc[3~, which
-        // reliably does get mapped to KEY_DC by ncurses. Some background:
-        //     https://invisible-island.net/xterm/xterm.faq.html#xterm_erase
-        // (I've never found documentation for the mac situation.)
-        case KEY_BACKSPACE: return CK_BKSP;
-        case KEY_IC:        return CK_INSERT;
-        case KEY_DC:        return CK_DELETE;
-        case KEY_HOME:      return CK_HOME;
-        case KEY_END:       return CK_END;
-        case KEY_PPAGE:     return CK_PGUP;
-        case KEY_NPAGE:     return CK_PGDN;
-        case KEY_UP:        return CK_UP;
-        case KEY_DOWN:      return CK_DOWN;
-        case KEY_LEFT:      return CK_LEFT;
-        case KEY_RIGHT:     return CK_RIGHT;
-        case KEY_BEG:       return CK_CLEAR;
+            //// XXX: Before ncurses get_wch() returns KEY_RESIZE, it
+            //// updates LINES and COLS to the new window size. The resize
+            //// handler will only redraw the whole screen if the main view
+            //// is being shown, for slightly insane reasons, which results
+            //// in crawl_view.termsz being out of sync.
+            ////
+            //// This causes crashiness: e.g. in a menu, make the window taller,
+            //// then scroll down one line. To fix this, we always sync termsz:
+            //crawl_view.init_geometry();
 
-        case KEY_BTAB:      return CK_SHIFT_TAB;
-        case KEY_SDC:       return CK_SHIFT_DELETE;
-        case KEY_SHOME:     return CK_SHIFT_HOME;
-        case KEY_SEND:      return CK_SHIFT_END;
-        case KEY_SPREVIOUS: return CK_SHIFT_PGUP;
-        case KEY_SNEXT:     return CK_SHIFT_PGDN;
-        case KEY_SR:        return CK_SHIFT_UP;
-        case KEY_SF:        return CK_SHIFT_DOWN;
-        case KEY_SLEFT:     return CK_SHIFT_LEFT;
-        case KEY_SRIGHT:    return CK_SHIFT_RIGHT;
+            //if (!getch_returns_resizes)
+                //continue;
+        //}
+//#endif
 
-        case KEY_A1:        return CK_NUMPAD_7;
-        case KEY_A3:        return CK_NUMPAD_9;
-        case KEY_B2:        return CK_NUMPAD_5;
-        case KEY_C1:        return CK_NUMPAD_1;
-        case KEY_C3:        return CK_NUMPAD_3;
+        //switch (-c)
+        //{
+        //case 127:
+        //// 127 is ASCII DEL, which some terminals (all mac, some linux) use for
+        //// the backspace key. ncurses does not typically map this to
+        //// KEY_BACKSPACE (though this may depend on TERM settings?). '\b' (^H)
+        //// in contrast should be handled automatically. Note that ASCII DEL
+        //// is distinct from the standard esc code for del, esc[3~, which
+        //// reliably does get mapped to KEY_DC by ncurses. Some background:
+        ////     https://invisible-island.net/xterm/xterm.faq.html#xterm_erase
+        //// (I've never found documentation for the mac situation.)
+        //case KEY_BACKSPACE: return CK_BKSP;
+        //case KEY_IC:        return CK_INSERT;
+        //case KEY_DC:        return CK_DELETE;
+        //case KEY_HOME:      return CK_HOME;
+        //case KEY_END:       return CK_END;
+        //case KEY_PPAGE:     return CK_PGUP;
+        //case KEY_NPAGE:     return CK_PGDN;
+        //case KEY_UP:        return CK_UP;
+        //case KEY_DOWN:      return CK_DOWN;
+        //case KEY_LEFT:      return CK_LEFT;
+        //case KEY_RIGHT:     return CK_RIGHT;
+        //case KEY_BEG:       return CK_CLEAR;
 
-#ifdef KEY_RESIZE
-        case KEY_RESIZE:    return CK_RESIZE;
-#endif
+        //case KEY_BTAB:      return CK_SHIFT_TAB;
+        //case KEY_SDC:       return CK_SHIFT_DELETE;
+        //case KEY_SHOME:     return CK_SHIFT_HOME;
+        //case KEY_SEND:      return CK_SHIFT_END;
+        //case KEY_SPREVIOUS: return CK_SHIFT_PGUP;
+        //case KEY_SNEXT:     return CK_SHIFT_PGDN;
+        //case KEY_SR:        return CK_SHIFT_UP;
+        //case KEY_SF:        return CK_SHIFT_DOWN;
+        //case KEY_SLEFT:     return CK_SHIFT_LEFT;
+        //case KEY_SRIGHT:    return CK_SHIFT_RIGHT;
 
-        // Undocumented ncurses control keycodes, here be dragons!!!
-        case 515:           return CK_CTRL_DELETE; // Mac
-        case 526:           return CK_CTRL_DELETE; // Linux
-        case 542:           return CK_CTRL_HOME;
-        case 537:           return CK_CTRL_END;
-        case 562:           return CK_CTRL_PGUP;
-        case 557:           return CK_CTRL_PGDN;
-        case 573:           return CK_CTRL_UP;
-        case 532:           return CK_CTRL_DOWN;
-        case 552:           return CK_CTRL_LEFT;
-        case 567:           return CK_CTRL_RIGHT;
+        //case KEY_A1:        return CK_NUMPAD_7;
+        //case KEY_A3:        return CK_NUMPAD_9;
+        //case KEY_B2:        return CK_NUMPAD_5;
+        //case KEY_C1:        return CK_NUMPAD_1;
+        //case KEY_C3:        return CK_NUMPAD_3;
 
-        default:            return c;
-        }
-    }
+//#ifdef KEY_RESIZE
+        //case KEY_RESIZE:    return CK_RESIZE;
+//#endif
+
+        //// Undocumented ncurses control keycodes, here be dragons!!!
+        //case 515:           return CK_CTRL_DELETE; // Mac
+        //case 526:           return CK_CTRL_DELETE; // Linux
+        //case 542:           return CK_CTRL_HOME;
+        //case 537:           return CK_CTRL_END;
+        //case 562:           return CK_CTRL_PGUP;
+        //case 557:           return CK_CTRL_PGDN;
+        //case 573:           return CK_CTRL_UP;
+        //case 532:           return CK_CTRL_DOWN;
+        //case 552:           return CK_CTRL_LEFT;
+        //case 567:           return CK_CTRL_RIGHT;
+
+        //default:            return c;
+        //}
+    //}
 }
 
 static void unix_handle_terminal_resize()
@@ -717,81 +777,81 @@ static void unix_handle_terminal_resize()
 
 static void unixcurses_defkeys()
 {
-#ifdef NCURSES_VERSION
-    // To debug these on a specific terminal, you can use `cat -v` to see what
-    // escape codes are being printed. To some degree it's better to let ncurses
-    // do what it can rather than hard-coding things, but that doesn't always
-    // work.
-    // cool trick: `printf '\033[?1061h\033='; cat -v` initializes application
-    // mode if the terminal supports it. (For some terminals, it may need to
-    // be explicitly allowed, or enable via numlock.)
+//#ifdef NCURSES_VERSION
+    //// To debug these on a specific terminal, you can use `cat -v` to see what
+    //// escape codes are being printed. To some degree it's better to let ncurses
+    //// do what it can rather than hard-coding things, but that doesn't always
+    //// work.
+    //// cool trick: `printf '\033[?1061h\033='; cat -v` initializes application
+    //// mode if the terminal supports it. (For some terminals, it may need to
+    //// be explicitly allowed, or enable via numlock.)
 
-    // keypad 0-9 (only if the "application mode" was successfully initialised)
-    define_key("\033Op", 1000);
-    define_key("\033Oq", 1001);
-    define_key("\033Or", 1002);
-    define_key("\033Os", 1003);
-    define_key("\033Ot", 1004);
-    define_key("\033Ou", 1005);
-    define_key("\033Ov", 1006);
-    define_key("\033Ow", 1007);
-    define_key("\033Ox", 1008);
-    define_key("\033Oy", 1009);
+    //// keypad 0-9 (only if the "application mode" was successfully initialised)
+    //define_key("\033Op", 1000);
+    //define_key("\033Oq", 1001);
+    //define_key("\033Or", 1002);
+    //define_key("\033Os", 1003);
+    //define_key("\033Ot", 1004);
+    //define_key("\033Ou", 1005);
+    //define_key("\033Ov", 1006);
+    //define_key("\033Ow", 1007);
+    //define_key("\033Ox", 1008);
+    //define_key("\033Oy", 1009);
 
-    // non-arrow keypad keys (for macros)
-    define_key("\033OM", 1010); // keypad enter
+    //// non-arrow keypad keys (for macros)
+    //define_key("\033OM", 1010); // keypad enter
 
-    // TODO: I don't know under what context these four are mapped to numpad
-    // keys, but they are *much* more commonly used for F1-F4. So don't
-    // unconditionally define these. But these mappings have been around for
-    // a while, so I'm hesitant to remove them...
-#define check_define_key(s, n) if (!key_defined(s)) define_key(s, n)
-    check_define_key("\033OP", 1011); // NumLock
-    check_define_key("\033OQ", 1012); // /
-    check_define_key("\033OR", 1013); // *
-    check_define_key("\033OS", 1014); // -
+    //// TODO: I don't know under what context these four are mapped to numpad
+    //// keys, but they are *much* more commonly used for F1-F4. So don't
+    //// unconditionally define these. But these mappings have been around for
+    //// a while, so I'm hesitant to remove them...
+//#define check_define_key(s, n) if (!key_defined(s)) define_key(s, n)
+    //check_define_key("\033OP", 1011); // NumLock
+    //check_define_key("\033OQ", 1012); // /
+    //check_define_key("\033OR", 1013); // *
+    //check_define_key("\033OS", 1014); // -
 
-    // TODO: these could probably use further verification on linux
-    // notes:
-    // * this code doesn't like to map multiple esc sequences to the same
-    //   keycode. However, doing so works fine on my testing on mac, on
-    //   current ncurses. Why would this be bad?
-    // * mac Terminal.app even in application mode does not shift =/*
-    // * historically, several comments here were wrong on my testing, but
-    //   they could be right somewhere. The current key descriptions are
-    //   accurate as far as I can tell.
-    define_key("\033Oj", 1015); // *
-    define_key("\033Ok", 1016); // + (probably everything else except mac terminal)
-    define_key("\033Ol", 1017); // + (mac terminal application mode)
-    define_key("\033Om", 1018); // -
-    define_key("\033On", 1019); // .
-    define_key("\033Oo", 1012); // / (may conflict with the above define?)
-    define_key("\033OX", 1021); // =, at least on mac console
+    //// TODO: these could probably use further verification on linux
+    //// notes:
+    //// * this code doesn't like to map multiple esc sequences to the same
+    ////   keycode. However, doing so works fine on my testing on mac, on
+    ////   current ncurses. Why would this be bad?
+    //// * mac Terminal.app even in application mode does not shift =[>
+    //// * historically, several comments here were wrong on my testing, but
+    ////   they could be right somewhere. The current key descriptions are
+    ////   accurate as far as I can tell.
+    //define_key("\033Oj", 1015); // *
+    //define_key("\033Ok", 1016); // + (probably everything else except mac terminal)
+    //define_key("\033Ol", 1017); // + (mac terminal application mode)
+    //define_key("\033Om", 1018); // -
+    //define_key("\033On", 1019); // .
+    //define_key("\033Oo", 1012); // / (may conflict with the above define?)
+    //define_key("\033OX", 1021); // =, at least on mac console
 
-# ifdef TARGET_OS_MACOSX
-    // force some mappings for function keys that work on mac Terminal.app with
-    // the default TERM value.
+//# ifdef TARGET_OS_MACOSX
+    //// force some mappings for function keys that work on mac Terminal.app with
+    //// the default TERM value.
 
-    // The following seem to be the rxvt escape codes, even
-    // though Terminal.app defaults to xterm-256color.
-    // TODO: would it be harmful to force this unconditionally?
-    check_define_key("\033[25~", 277); // F13
-    check_define_key("\033[26~", 278); // F14
-    check_define_key("\033[28~", 279); // F15
-    check_define_key("\033[29~", 280); // F16
-    check_define_key("\033[31~", 281); // F17
-    check_define_key("\033[32~", 282); // F18
-    check_define_key("\033[33~", 283); // F19, highest key on a magic keyboard
+    //// The following seem to be the rxvt escape codes, even
+    //// though Terminal.app defaults to xterm-256color.
+    //// TODO: would it be harmful to force this unconditionally?
+    //check_define_key("\033[25~", 277); // F13
+    //check_define_key("\033[26~", 278); // F14
+    //check_define_key("\033[28~", 279); // F15
+    //check_define_key("\033[29~", 280); // F16
+    //check_define_key("\033[31~", 281); // F17
+    //check_define_key("\033[32~", 282); // F18
+    //check_define_key("\033[33~", 283); // F19, highest key on a magic keyboard
 
-    // not sure exactly what's up with these, but they exist by default:
-    // ctrl bindings do too, but they are intercepted by macos
-    check_define_key("\033b", -(CK_LEFT + CK_ALT_BASE));
-    check_define_key("\033f", -(CK_RIGHT + CK_ALT_BASE));
-    // (sadly, only left and right have modifiers by default on Terminal.app)
-# endif
-#undef check_define_key
+    //// not sure exactly what's up with these, but they exist by default:
+    //// ctrl bindings do too, but they are intercepted by macos
+    //check_define_key("\033b", -(CK_LEFT + CK_ALT_BASE));
+    //check_define_key("\033f", -(CK_RIGHT + CK_ALT_BASE));
+    //// (sadly, only left and right have modifiers by default on Terminal.app)
+//# endif
+//#undef check_define_key
 
-#endif
+//#endif
 }
 
 // Certain terminals support vt100 keypad application mode only after some
@@ -815,87 +875,91 @@ static void _headless_startup()
 
 void console_startup()
 {
-    if (_headless_mode)
-    {
-        _headless_startup();
-        return;
-    }
-    termio_init();
+    // Init the screen
+    screenArray = std::vector<std::vector<cchar_t>>(HEADLESS_LINES, std::vector<cchar_t>(HEADLESS_COLS, ' '));
+    return;
 
-#ifdef CURSES_USE_KEYPAD
-    // If hardening is enabled (default on recent distributions), glibc
-    // declares write() with __attribute__((warn_unused_result)) which not
-    // only spams when not relevant, but cannot even be selectively hushed
-    // by (void) casts like all other such warnings.
-    // "if ();" is an unsightly hack...
-    if (write(1, KPADAPP, strlen(KPADAPP))) {};
-#endif
+    //if (_headless_mode)
+    //{
+        //_headless_startup();
+        //return;
+    //}
+    //termio_init();
 
-#ifdef USE_UNIX_SIGNALS
-# ifndef KEY_RESIZE
-    signal(SIGWINCH, unix_handle_resize_event);
-# endif
-#endif
+//#ifdef CURSES_USE_KEYPAD
+    //// If hardening is enabled (default on recent distributions), glibc
+    //// declares write() with __attribute__((warn_unused_result)) which not
+    //// only spams when not relevant, but cannot even be selectively hushed
+    //// by (void) casts like all other such warnings.
+    //// "if ();" is an unsightly hack...
+    //if (write(1, KPADAPP, strlen(KPADAPP))) {};
+//#endif
 
-    initscr();
-    raw();
-    noecho();
+//#ifdef USE_UNIX_SIGNALS
+//# ifndef KEY_RESIZE
+    //signal(SIGWINCH, unix_handle_resize_event);
+//# endif
+//#endif
 
-    nonl();
-    intrflush(stdscr, FALSE);
-#ifdef CURSES_USE_KEYPAD
-    keypad(stdscr, TRUE);
+    //initscr();
+    //raw();
+    //noecho();
 
-# ifdef CURSES_SET_ESCDELAY
-#  ifdef NCURSES_REENTRANT
-    set_escdelay(CURSES_SET_ESCDELAY);
-#  else
-    ESCDELAY = CURSES_SET_ESCDELAY;
-#  endif
-# endif
-#endif
+    //nonl();
+    //intrflush(stdscr, FALSE);
+//#ifdef CURSES_USE_KEYPAD
+    //keypad(stdscr, TRUE);
 
-    meta(stdscr, TRUE);
-    unixcurses_defkeys();
-    start_color();
+//# ifdef CURSES_SET_ESCDELAY
+//#  ifdef NCURSES_REENTRANT
+    //set_escdelay(CURSES_SET_ESCDELAY);
+//#  else
+    //ESCDELAY = CURSES_SET_ESCDELAY;
+//#  endif
+//# endif
+//#endif
 
-    setup_colour_pairs();
-    // Since it may swap pairs, set default colors *after* setting up all pairs.
-    curs_set_default_colors();
+    //meta(stdscr, TRUE);
+    //unixcurses_defkeys();
+    //start_color();
 
-    scrollok(stdscr, FALSE);
+    //setup_colour_pairs();
+    //// Since it may swap pairs, set default colors *after* setting up all pairs.
+    //curs_set_default_colors();
 
-    // Must call refresh() for ncurses to update COLS and LINES.
-    refresh();
-    crawl_view.init_geometry();
+    //scrollok(stdscr, FALSE);
 
-    // TODO: how does this relate to what tiles.resize does?
-    ui::resize(crawl_view.termsz.x, crawl_view.termsz.y);
+    //// Must call refresh() for ncurses to update COLS and LINES.
+    //refresh();
+    //crawl_view.init_geometry();
 
-#ifdef USE_TILE_WEB
-    tiles.resize();
-#endif
+    //// TODO: how does this relate to what tiles.resize does?
+    //ui::resize(crawl_view.termsz.x, crawl_view.termsz.y);
+
+//#ifdef USE_TILE_WEB
+    //tiles.resize();
+//#endif
 }
 
 void console_shutdown()
 {
-    if (_headless_mode)
-        return;
+    //if (_headless_mode)
+        //return;
 
-    // resetty();
-    endwin();
+    //// resetty();
+    //endwin();
 
-    tcsetattr(0, TCSAFLUSH, &def_term);
-#ifdef CURSES_USE_KEYPAD
-    // "if ();" to avoid undisableable spurious warning.
-    if (write(1, KPADCUR, strlen(KPADCUR))) {};
-#endif
+    //tcsetattr(0, TCSAFLUSH, &def_term);
+//#ifdef CURSES_USE_KEYPAD
+    //// "if ();" to avoid undisableable spurious warning.
+    //if (write(1, KPADCUR, strlen(KPADCUR))) {};
+//#endif
 
-#ifdef USE_UNIX_SIGNALS
-# ifndef KEY_RESIZE
-    signal(SIGWINCH, SIG_DFL);
-# endif
-#endif
+//#ifdef USE_UNIX_SIGNALS
+//# ifndef KEY_RESIZE
+    //signal(SIGWINCH, SIG_DFL);
+//# endif
+//#endif
 }
 
 void cprintf(const char *format, ...)
@@ -920,36 +984,38 @@ void cprintf(const char *format, ...)
 
 void putwch(char32_t chr)
 {
-    wchar_t c = chr; // ??
-    if (_headless_mode)
-    {
-        // simulate cursor movement and wrapping
-        headless_x += c ? wcwidth(chr) : 0;
-        if (headless_x >= HEADLESS_COLS && headless_y >= HEADLESS_LINES)
-        {
-            headless_x = HEADLESS_COLS;
-            headless_y = HEADLESS_LINES;
-        }
-        else if (headless_x > HEADLESS_COLS)
-        {
-            headless_y++;
-            headless_x = headless_x - HEADLESS_COLS;
-        }
-    }
-    else
-    {
-        if (!c)
-            c = ' ';
-        // TODO: recognize unsupported characters and try to transliterate
-        addnwstr(&c, 1);
-    }
+    screenArray[curY][curX] = chr;
+    curX++;
+    //wchar_t c = chr; // ??
+    //if (_headless_mode)
+    //{
+        //// simulate cursor movement and wrapping
+        //headless_x += c ? wcwidth(chr) : 0;
+        //if (headless_x >= HEADLESS_COLS && headless_y >= HEADLESS_LINES)
+        //{
+            //headless_x = HEADLESS_COLS;
+            //headless_y = HEADLESS_LINES;
+        //}
+        //else if (headless_x > HEADLESS_COLS)
+        //{
+            //headless_y++;
+            //headless_x = headless_x - HEADLESS_COLS;
+        //}
+    //}
+    //else
+    //{
+        //if (!c)
+            //c = ' ';
+        //// TODO: recognize unsupported characters and try to transliterate
+        //addnwstr(&c, 1);
+    //}
 
-#ifdef USE_TILE_WEB
-    char32_t buf[2];
-    buf[0] = chr;
-    buf[1] = 0;
-    tiles.put_ucs_string(buf);
-#endif
+//#ifdef USE_TILE_WEB
+    //char32_t buf[2];
+    //buf[0] = chr;
+    //buf[1] = 0;
+    //tiles.put_ucs_string(buf);
+//#endif
 }
 
 void puttext(int x1, int y1, const crawl_view_buffer &vbuf)
@@ -975,47 +1041,62 @@ void puttext(int x1, int y1, const crawl_view_buffer &vbuf)
 // C++ string class.  -- bwr
 void update_screen()
 {
-    // In objstat, headless, and similar modes, there might not be a screen to update.
-    if (stdscr)
+    for (int y = 0; y < HEADLESS_LINES; ++y)
     {
-        // Refreshing the default colors helps keep colors synced in ttyrecs.
-        curs_set_default_colors();
-        refresh();
+        for (int x = 0; x < HEADLESS_COLS; ++x)
+        {
+            std::cout << char(screenArray[y][x]);
+        }
+        std::cout << std::endl;
     }
+    
+    // In objstat, headless, and similar modes, there might not be a screen to update.
+    //if (stdscr)
+    //{
+        //// Refreshing the default colors helps keep colors synced in ttyrecs.
+        //curs_set_default_colors();
+        //refresh();
+    //}
 
-#ifdef USE_TILE_WEB
-    tiles.set_need_redraw();
-#endif
+//#ifdef USE_TILE_WEB
+    //tiles.set_need_redraw();
+//#endif
 }
 
 void clear_to_end_of_line()
 {
-    if (!_headless_mode)
+    for (int x = curX; x < get_number_of_cols(); ++x)
     {
-        textcolour(LIGHTGREY);
-        textbackground(BLACK);
-        clrtoeol(); // shouldn't move cursor pos
+        putwch(' ');
     }
+    //if (!_headless_mode)
+    //{
+        //textcolour(LIGHTGREY);
+        //textbackground(BLACK);
+        //clrtoeol(); // shouldn't move cursor pos
+    //}
 
-#ifdef USE_TILE_WEB
-    tiles.clear_to_end_of_line();
-#endif
+//#ifdef USE_TILE_WEB
+    //tiles.clear_to_end_of_line();
+//#endif
 }
 
 int get_number_of_lines()
 {
-    if (_headless_mode)
-        return HEADLESS_LINES;
-    else
-        return LINES;
+    return HEADLESS_LINES;
+    //if (_headless_mode)
+        //return HEADLESS_LINES;
+    //else
+        //return LINES;
 }
 
 int get_number_of_cols()
 {
-    if (_headless_mode)
-        return HEADLESS_COLS;
-    else
-        return COLS;
+    return HEADLESS_COLS;
+    //if (_headless_mode)
+        //return HEADLESS_COLS;
+    //else
+        //return COLS;
 }
 
 int num_to_lines(int num)
@@ -1043,32 +1124,39 @@ suppress_dgl_clrscr::~suppress_dgl_clrscr()
 
 void clrscr_sys()
 {
-    if (_headless_mode)
+    for (int y = 0; y < HEADLESS_LINES; ++y)
     {
-        headless_x = 1;
-        headless_y = 1;
-        return;
+        for (int x = 0; x < HEADLESS_COLS; ++x)
+        {
+            screenArray[y][x] = ' ';
+        }
     }
+    //if (_headless_mode)
+    //{
+        //headless_x = 1;
+        //headless_y = 1;
+        //return;
+    //}
 
-    textcolour(LIGHTGREY);
-    textbackground(BLACK);
-    clear();
-#ifdef DGAMELAUNCH
-    if (!_suppress_dgl_clrscr)
-    {
-        printf("%s", DGL_CLEAR_SCREEN);
-        fflush(stdout);
-    }
-#endif
+    //textcolour(LIGHTGREY);
+    //textbackground(BLACK);
+    //clear();
+//#ifdef DGAMELAUNCH
+    //if (!_suppress_dgl_clrscr)
+    //{
+        //printf("%s", DGL_CLEAR_SCREEN);
+        //fflush(stdout);
+    //}
+//#endif
 
 }
 
 void set_cursor_enabled(bool enabled)
 {
-    curs_set(cursor_is_enabled = enabled);
-#ifdef USE_TILE_WEB
-    tiles.set_text_cursor(enabled);
-#endif
+    //curs_set(cursor_is_enabled = enabled);
+//#ifdef USE_TILE_WEB
+    //tiles.set_text_cursor(enabled);
+//#endif
 }
 
 bool is_cursor_enabled()
@@ -1092,73 +1180,73 @@ static inline unsigned get_highlight(int col)
 }
 
 // see declaration
-static curses_style curs_attr(COLOURS fg, COLOURS bg, bool adjust_background)
-{
-    curses_style style;
-    style.attr = 0;
-    style.color_pair = 0;
-    bool monochrome_output_requested = curs_palette_size() == 0;
+//static curses_style curs_attr(COLOURS fg, COLOURS bg, bool adjust_background)
+//{
+    //curses_style style;
+    //style.attr = 0;
+    //style.color_pair = 0;
+    //bool monochrome_output_requested = curs_palette_size() == 0;
 
-    // Convert over to curses colours.
-    short fg_curses = translate_colour(fg);
-    short bg_curses = translate_colour(bg);
+    //// Convert over to curses colours.
+    //short fg_curses = translate_colour(fg);
+    //short bg_curses = translate_colour(bg);
 
-    // Resolve fg/bg colour conflicts.
-    curs_adjust_color_pair_to_non_identical(fg_curses, bg_curses,
-        adjust_background);
+    //// Resolve fg/bg colour conflicts.
+    //curs_adjust_color_pair_to_non_identical(fg_curses, bg_curses,
+        //adjust_background);
 
-    if (!monochrome_output_requested)
-    {
-        // Grab the colour pair.
-        style.color_pair = curs_calc_pair_safe(fg_curses, bg_curses);
+    //if (!monochrome_output_requested)
+    //{
+        //// Grab the colour pair.
+        //style.color_pair = curs_calc_pair_safe(fg_curses, bg_curses);
 
-        // Request decolourise if the pair doesn't actually exist.
-        if (style.color_pair == 0
-            && !curs_color_combo_has_pair(fg_curses, bg_curses))
-        {
-            monochrome_output_requested = true;
-        }
-    }
+        //// Request decolourise if the pair doesn't actually exist.
+        //if (style.color_pair == 0
+            //&& !curs_color_combo_has_pair(fg_curses, bg_curses))
+        //{
+            //monochrome_output_requested = true;
+        //}
+    //}
 
-    if (!curs_can_use_extended_colors())
-    {
-        // curses typically uses WA_BOLD to give bright foreground colour,
-        // but various termcaps may disagree
-        if ((fg_curses & COLFLAG_CURSES_BRIGHTEN)
-            && (Options.bold_brightens_foreground != false
-                || Options.best_effort_brighten_foreground))
-        {
-            style.attr |= WA_BOLD;
-        }
+    //if (!curs_can_use_extended_colors())
+    //{
+        //// curses typically uses WA_BOLD to give bright foreground colour,
+        //// but various termcaps may disagree
+        //if ((fg_curses & COLFLAG_CURSES_BRIGHTEN)
+            //&& (Options.bold_brightens_foreground != false
+                //|| Options.best_effort_brighten_foreground))
+        //{
+            //style.attr |= WA_BOLD;
+        //}
 
-        // curses typically uses WA_BLINK to give bright background colour,
-        // but various termcaps may disagree (in whole or in part)
-        if ((bg_curses & COLFLAG_CURSES_BRIGHTEN)
-            && (Options.blink_brightens_background
-                || Options.best_effort_brighten_background))
-        {
-            style.attr |= WA_BLINK;
-        }
-    }
-    else if (bool(Options.bold_brightens_foreground)
-                && (fg_curses & COLFLAG_CURSES_BRIGHTEN))
-    {
-        style.attr |= WA_BOLD;
-    }
+        //// curses typically uses WA_BLINK to give bright background colour,
+        //// but various termcaps may disagree (in whole or in part)
+        //if ((bg_curses & COLFLAG_CURSES_BRIGHTEN)
+            //&& (Options.blink_brightens_background
+                //|| Options.best_effort_brighten_background))
+        //{
+            //style.attr |= WA_BLINK;
+        //}
+    //}
+    //else if (bool(Options.bold_brightens_foreground)
+                //&& (fg_curses & COLFLAG_CURSES_BRIGHTEN))
+    //{
+        //style.attr |= WA_BOLD;
+    //}
 
-    if (monochrome_output_requested)
-    {
-        // Decolourise the output if necessary.
-        if (curs_palette_size() != 0)
-            style.color_pair = curs_calc_pair_safe(COLOR_WHITE, COLOR_BLACK);
+    //if (monochrome_output_requested)
+    //{
+        //// Decolourise the output if necessary.
+        //if (curs_palette_size() != 0)
+            //style.color_pair = curs_calc_pair_safe(COLOR_WHITE, COLOR_BLACK);
 
-        // Do the best we can for backgrounds with monochrome output.
-        if (bg_curses != COLOR_BLACK)
-            style.attr |= WA_REVERSE;
-    }
+        //// Do the best we can for backgrounds with monochrome output.
+        //if (bg_curses != COLOR_BLACK)
+            //style.attr |= WA_REVERSE;
+    //}
 
-    return style;
-}
+    //return style;
+//}
 
 // see declaration
 static curses_style curs_attr_bg(int col)
@@ -1175,48 +1263,48 @@ static curses_style curs_attr_fg(int col)
 }
 
 // see declaration
-static curses_style curs_attr_mapped(COLOURS fg, COLOURS bg, int highlight)
-{
-    COLOURS fg_mod = fg;
-    COLOURS bg_mod = bg;
-    attr_t flags = 0;
+//static curses_style curs_attr_mapped(COLOURS fg, COLOURS bg, int highlight)
+//{
+    //COLOURS fg_mod = fg;
+    //COLOURS bg_mod = bg;
+    //attr_t flags = 0;
 
-    // calculate which curses flags we need...
-    if (highlight != CHATTR_NORMAL)
-    {
-        flags |= convert_to_curses_style(highlight);
+    //// calculate which curses flags we need...
+    //if (highlight != CHATTR_NORMAL)
+    //{
+        //flags |= convert_to_curses_style(highlight);
 
-        // Allow highlights to override the current background color.
-        if ((highlight & CHATTR_ATTRMASK) == CHATTR_HILITE)
-            bg_mod = static_cast<COLOURS>((highlight & CHATTR_COLMASK) >> 8);
-    }
+        //// Allow highlights to override the current background color.
+        //if ((highlight & CHATTR_ATTRMASK) == CHATTR_HILITE)
+            //bg_mod = static_cast<COLOURS>((highlight & CHATTR_COLMASK) >> 8);
+    //}
 
-    // Respect color remapping.
-    fg_mod = static_cast<COLOURS>(macro_colour(static_cast<short>(fg_mod)));
-    bg_mod = static_cast<COLOURS>(macro_colour(static_cast<short>(bg_mod)));
+    //// Respect color remapping.
+    //fg_mod = static_cast<COLOURS>(macro_colour(static_cast<short>(fg_mod)));
+    //bg_mod = static_cast<COLOURS>(macro_colour(static_cast<short>(bg_mod)));
 
-    // Use the default foreground for lightgrey, with reverse mapping.
-    if (fg_mod == LIGHTGREY)
-        fg_mod = FG_COL_DEFAULT;
-    else if (fg_mod == FG_COL_DEFAULT)
-        fg_mod = LIGHTGREY;
+    //// Use the default foreground for lightgrey, with reverse mapping.
+    //if (fg_mod == LIGHTGREY)
+        //fg_mod = FG_COL_DEFAULT;
+    //else if (fg_mod == FG_COL_DEFAULT)
+        //fg_mod = LIGHTGREY;
 
-    // Use the default background for black, with reverse mapping.
-    if (bg_mod == BLACK)
-        bg_mod = BG_COL_DEFAULT;
-    else if (bg_mod == BG_COL_DEFAULT)
-        bg_mod = BLACK;
+    //// Use the default background for black, with reverse mapping.
+    //if (bg_mod == BLACK)
+        //bg_mod = BG_COL_DEFAULT;
+    //else if (bg_mod == BG_COL_DEFAULT)
+        //bg_mod = BLACK;
 
-    // Done with color mapping; get the resulting attributes.
-    curses_style ret = curs_attr(fg_mod, bg_mod);
-    ret.attr |= flags;
+    //// Done with color mapping; get the resulting attributes.
+    //curses_style ret = curs_attr(fg_mod, bg_mod);
+    //ret.attr |= flags;
 
-    // Reverse color manually to ensure correct brightening attrs.
-    if ((highlight & CHATTR_ATTRMASK) == CHATTR_REVERSE)
-        return flip_colour(ret);
+    //// Reverse color manually to ensure correct brightening attrs.
+    //if ((highlight & CHATTR_ATTRMASK) == CHATTR_REVERSE)
+        //return flip_colour(ret);
 
-    return ret;
-}
+    //return ret;
+//}
 
 // see declaration
 static short curs_calc_pair_safe(short fg, short bg)
@@ -1255,49 +1343,50 @@ static short curs_calc_pair_safe(short fg, short bg, short fg_default,
     short bg_default)
 {
     // Use something wider than short for the calculation in case of overflow.
-    long pair = 0;
+    //long pair = 0;
 
-    if (fg == fg_default && bg == bg_default)
-        pair = 0;
-    else
-    {
-        // Remap the *default* default curses pair as necessary.
-        short fg_mapped = fg;
-        short bg_mapped = bg;
+    //if (fg == fg_default && bg == bg_default)
+        //pair = 0;
+    //else
+    //{
+        //// Remap the *default* default curses pair as necessary.
+        //short fg_mapped = fg;
+        //short bg_mapped = bg;
 
-        if (fg == COLOR_WHITE && bg == COLOR_BLACK)
-        {
-            fg_mapped = fg_default;
-            bg_mapped = bg_default;
-        }
+        //if (fg == COLOR_WHITE && bg == COLOR_BLACK)
+        //{
+            //fg_mapped = fg_default;
+            //bg_mapped = bg_default;
+        //}
 
-        // Work around the *default* default combination hole.
-        const short num_colors = curs_palette_size();
-        const short default_color_hole = 1 + COLOR_BLACK * num_colors
-            + COLOR_WHITE;
+        //// Work around the *default* default combination hole.
+        //const short num_colors = curs_palette_size();
+        //const short default_color_hole = 1 + COLOR_BLACK * num_colors
+            //+ COLOR_WHITE;
 
-        // Calculate the pair index, starting from 1.
-        pair = 1 + bg_mapped * num_colors + fg_mapped;
-        if (pair > default_color_hole)
-            pair--;
-    }
+        //// Calculate the pair index, starting from 1.
+        //pair = 1 + bg_mapped * num_colors + fg_mapped;
+        //if (pair > default_color_hole)
+            //pair--;
+    //}
 
-    // Last, validate the pair. Guard against overflow and bogus input.
-    if (pair > COLOR_PAIRS || pair < 0)
-        pair = 0;
+    //// Last, validate the pair. Guard against overflow and bogus input.
+    //if (pair > COLOR_PAIRS || pair < 0)
+        //pair = 0;
 
-    return static_cast<short>(pair);
+    //return static_cast<short>(pair);
 }
 
 // see declaration
 static bool curs_can_use_extended_colors()
 {
-    return Options.allow_extended_colours && COLORS >= NUM_TERM_COLOURS;
+    //return Options.allow_extended_colours && COLORS >= NUM_TERM_COLOURS;
+    return false;
 }
 
 lib_display_info::lib_display_info()
     : type(CRAWL_BUILD_NAME),
-    term(termname()),
+    term("curseless"),
     fg_colors(
         (curs_can_use_extended_colors()
                 || Options.bold_brightens_foreground != false)
@@ -1316,13 +1405,13 @@ static bool curs_color_combo_has_pair(short fg, short bg)
 
     bool has_pair = false;
 
-    if (curs_palette_size() > 0)
-    {
-        if (fg == fg_col_curses && bg == bg_col_curses)
-            has_pair = true;
-        else
-            has_pair = curs_calc_pair_safe(fg, bg, COLOR_WHITE, COLOR_BLACK);
-    }
+    //if (curs_palette_size() > 0)
+    //{
+        //if (fg == fg_col_curses && bg == bg_col_curses)
+            //has_pair = true;
+        //else
+            //has_pair = curs_calc_pair_safe(fg, bg, COLOR_WHITE, COLOR_BLACK);
+    //}
 
     return has_pair;
 }
@@ -1332,46 +1421,46 @@ static void curs_adjust_color_pair_to_non_identical(short &fg, short &bg,
     bool adjust_background)
 {
     // The default colors.
-    short fg_default = translate_colour(FG_COL_DEFAULT);
-    short bg_default = translate_colour(BG_COL_DEFAULT);
+    //short fg_default = translate_colour(FG_COL_DEFAULT);
+    //short bg_default = translate_colour(BG_COL_DEFAULT);
 
-    // The expected output colors.
-    short fg_to_compare = fg;
-    short bg_to_compare = bg;
-    short fg_default_to_compare = fg_default;
-    short bg_default_to_compare = bg_default;
+    //// The expected output colors.
+    //short fg_to_compare = fg;
+    //short bg_to_compare = bg;
+    //short fg_default_to_compare = fg_default;
+    //short bg_default_to_compare = bg_default;
 
-    // Adjust the brighten bits of the expected output color depending on the
-    // game options, so we are doing an apples to apples comparison. If we
-    // aren't using extended colors, *and* we aren't applying a bold to
-    // brighten, then brightened colors are guaranteed not to be different
-    // than unbrightened colors. With just a `best_effort..` option set, don't
-    // undo brightening as it isn't assumed to be safe. It is this
-    // transformation that can result in black on black if a player incorrectly
-    // sets one of these options.
-    if (!curs_can_use_extended_colors())
-    {
-        if (!Options.bold_brightens_foreground)
-        {
-            fg_to_compare = fg & ~COLFLAG_CURSES_BRIGHTEN;
-            fg_default_to_compare = fg_default & ~COLFLAG_CURSES_BRIGHTEN;
-        }
+    //// Adjust the brighten bits of the expected output color depending on the
+    //// game options, so we are doing an apples to apples comparison. If we
+    //// aren't using extended colors, *and* we aren't applying a bold to
+    //// brighten, then brightened colors are guaranteed not to be different
+    //// than unbrightened colors. With just a `best_effort..` option set, don't
+    //// undo brightening as it isn't assumed to be safe. It is this
+    //// transformation that can result in black on black if a player incorrectly
+    //// sets one of these options.
+    //if (!curs_can_use_extended_colors())
+    //{
+        //if (!Options.bold_brightens_foreground)
+        //{
+            //fg_to_compare = fg & ~COLFLAG_CURSES_BRIGHTEN;
+            //fg_default_to_compare = fg_default & ~COLFLAG_CURSES_BRIGHTEN;
+        //}
 
-        if (!Options.blink_brightens_background)
-        {
-            bg_to_compare = bg & ~COLFLAG_CURSES_BRIGHTEN;
-            bg_default_to_compare = bg_default & ~COLFLAG_CURSES_BRIGHTEN;
-        }
-    }
+        //if (!Options.blink_brightens_background)
+        //{
+            //bg_to_compare = bg & ~COLFLAG_CURSES_BRIGHTEN;
+            //bg_default_to_compare = bg_default & ~COLFLAG_CURSES_BRIGHTEN;
+        //}
+    //}
 
-    if (fg_to_compare != bg_to_compare)
-        return;  // colours look different; no need to adjust
+    //if (fg_to_compare != bg_to_compare)
+        //return;  // colours look different; no need to adjust
 
-    // Choose terminal's current default colors as the default failsafe.
-    short failsafe_col = adjust_background ? fg_default : bg_default;
+    //// Choose terminal's current default colors as the default failsafe.
+    //short failsafe_col = adjust_background ? fg_default : bg_default;
 
-    if (!adjust_background && fg_to_compare == bg_default_to_compare)
-    {
+    //if (!adjust_background && fg_to_compare == bg_default_to_compare)
+    //{
         /*
             * Replacing the *foreground* color with a secondary failsafe.
             *
@@ -1383,33 +1472,33 @@ static void curs_adjust_color_pair_to_non_identical(short &fg, short &bg,
             * mitigate information contrast issues with bright black
             * foregrounds by using blue as a special-case failsafe color.
             */
-        switch (bg_default_to_compare)
-        {
-        case COLOR_BLACK:
-            if (fg_default_to_compare == COLOR_WHITE
-                || fg_default_to_compare == COLOR_BLACK)
-            {
-                failsafe_col = COLOR_BLUE;
-            }
-            else
-                failsafe_col = COLOR_WHITE;
-            break;
-        case COLOR_WHITE:
-            if (fg_default_to_compare == COLOR_WHITE
-                || fg_default_to_compare == COLOR_BLACK)
-            {
-                failsafe_col = COLOR_BLUE;
-            }
-            else
-                failsafe_col = COLOR_BLACK;
-            break;
-        default:
-            failsafe_col = COLOR_BLACK;
-            break;
-        }
-    }
-    else if (adjust_background && bg_to_compare == fg_default_to_compare)
-    {
+        //switch (bg_default_to_compare)
+        //{
+        //case COLOR_BLACK:
+            //if (fg_default_to_compare == COLOR_WHITE
+                //|| fg_default_to_compare == COLOR_BLACK)
+            //{
+                //failsafe_col = COLOR_BLUE;
+            //}
+            //else
+                //failsafe_col = COLOR_WHITE;
+            //break;
+        //case COLOR_WHITE:
+            //if (fg_default_to_compare == COLOR_WHITE
+                //|| fg_default_to_compare == COLOR_BLACK)
+            //{
+                //failsafe_col = COLOR_BLUE;
+            //}
+            //else
+                //failsafe_col = COLOR_BLACK;
+            //break;
+        //default:
+            //failsafe_col = COLOR_BLACK;
+            //break;
+        //}
+    //}
+    //else if (adjust_background && bg_to_compare == fg_default_to_compare)
+    //{
         /*
             * Replacing the *background* color with a secondary failsafe.
             *
@@ -1420,30 +1509,31 @@ static void curs_adjust_color_pair_to_non_identical(short &fg, short &bg,
             *    black-on-blue when reversed looks much worse than a change to
             *    black-on-white.
             */
-        if (fg_default_to_compare == COLOR_BLACK)
-            failsafe_col = COLOR_WHITE;
-        else
-            failsafe_col = COLOR_BLACK;
-    }
+        //if (fg_default_to_compare == COLOR_BLACK)
+            //failsafe_col = COLOR_WHITE;
+        //else
+            //failsafe_col = COLOR_BLACK;
+    //}
 
-    // Update the appropriate color in the pair.
-    if (adjust_background)
-        bg = failsafe_col;
-    else
-        fg = failsafe_col;
+    //// Update the appropriate color in the pair.
+    //if (adjust_background)
+        //bg = failsafe_col;
+    //else
+        //fg = failsafe_col;
 }
 
 // see declaration
 static short curs_palette_size()
 {
-    int palette_size = std::min(COLORS, static_cast<int>(NUM_TERM_COLOURS));
+    return 0;
+    //int palette_size = std::min(COLORS, static_cast<int>(NUM_TERM_COLOURS));
 
-    if (palette_size > SHRT_MAX)
-        palette_size = SHRT_MAX;
-    else if (palette_size < 8)
-        palette_size = 0;
+    //if (palette_size > SHRT_MAX)
+        //palette_size = SHRT_MAX;
+    //else if (palette_size < 8)
+        //palette_size = 0;
 
-    return palette_size;
+    //return palette_size;
 }
 
 /**
@@ -1465,128 +1555,128 @@ static short curs_palette_size()
 static void curs_set_default_colors()
 {
     // The *default* default curses colors.
-    const COLOURS failsafe_fg = curses_color_to_internal_colour(COLOR_WHITE);
-    const COLOURS failsafe_bg = curses_color_to_internal_colour(COLOR_BLACK);
+    //const COLOURS failsafe_fg = curses_color_to_internal_colour(COLOR_WHITE);
+    //const COLOURS failsafe_bg = curses_color_to_internal_colour(COLOR_BLACK);
 
-    int default_colors_loaded = ERR;
-    COLOURS default_fg_prev = FG_COL_DEFAULT;
-    COLOURS default_bg_prev = BG_COL_DEFAULT;
-    COLOURS default_fg = static_cast<COLOURS>(Options.foreground_colour);
-    COLOURS default_bg = static_cast<COLOURS>(Options.background_colour);
+    //int default_colors_loaded = ERR;
+    //COLOURS default_fg_prev = FG_COL_DEFAULT;
+    //COLOURS default_bg_prev = BG_COL_DEFAULT;
+    //COLOURS default_fg = static_cast<COLOURS>(Options.foreground_colour);
+    //COLOURS default_bg = static_cast<COLOURS>(Options.background_colour);
 
-#ifdef NCURSES_VERSION
-    if (!curs_can_use_extended_colors())
-    {
-        // Deny colours outside the standard 8-color palette.
-        if (is_high_colour(default_fg))
-            default_fg = failsafe_fg;
-        if (is_high_colour(default_bg))
-            default_bg = failsafe_bg;
-    }
+//#ifdef NCURSES_VERSION
+    //if (!curs_can_use_extended_colors())
+    //{
+        //// Deny colours outside the standard 8-color palette.
+        //if (is_high_colour(default_fg))
+            //default_fg = failsafe_fg;
+        //if (is_high_colour(default_bg))
+            //default_bg = failsafe_bg;
+    //}
 
-    // Deny default background colours which can't pair with all foregrounds.
-    if (!curs_color_combo_has_pair(curs_palette_size() - 1,
-        translate_colour(default_bg)))
-    {
-        default_bg = failsafe_bg;
-    }
+    //// Deny default background colours which can't pair with all foregrounds.
+    //if (!curs_color_combo_has_pair(curs_palette_size() - 1,
+        //translate_colour(default_bg)))
+    //{
+        //default_bg = failsafe_bg;
+    //}
 
-    // Assume new default colors.
-    if (Options.use_terminal_default_colours)
-        default_colors_loaded = OK;
-    else if (curs_palette_size() == 0)
-        default_colors_loaded = use_default_colors();
-    else
-    {
-        default_colors_loaded = assume_default_colors(
-            translate_colour(default_fg), translate_colour(default_bg));
-    }
-#endif
+    //// Assume new default colors.
+    //if (Options.use_terminal_default_colours)
+        //default_colors_loaded = OK;
+    //else if (curs_palette_size() == 0)
+        //default_colors_loaded = use_default_colors();
+    //else
+    //{
+        //default_colors_loaded = assume_default_colors(
+            //translate_colour(default_fg), translate_colour(default_bg));
+    //}
+//#endif
 
-    // Check if a failsafe is needed.
-    if (default_colors_loaded == ERR)
-    {
-        default_fg = failsafe_fg;
-        default_bg = failsafe_bg;
-    }
+    //// Check if a failsafe is needed.
+    //if (default_colors_loaded == ERR)
+    //{
+        //default_fg = failsafe_fg;
+        //default_bg = failsafe_bg;
+    //}
 
-    // Store the validated default colors.
-    // The new default color pair is now in pair 0.
-    FG_COL_DEFAULT = default_fg;
-    BG_COL_DEFAULT = default_bg;
+    //// Store the validated default colors.
+    //// The new default color pair is now in pair 0.
+    //FG_COL_DEFAULT = default_fg;
+    //BG_COL_DEFAULT = default_bg;
 
-    // Restore the previous default color pair.
-    short default_fg_prev_curses = translate_colour(default_fg_prev);
-    short default_bg_prev_curses = translate_colour(default_bg_prev);
-    short prev_default_pair = curs_calc_pair_safe(default_fg_prev_curses,
-        default_bg_prev_curses, COLOR_WHITE, COLOR_BLACK);
-    if (prev_default_pair != 0)
-    {
-        init_pair_safe(prev_default_pair, default_fg_prev_curses,
-            default_bg_prev_curses);
-    }
+    //// Restore the previous default color pair.
+    //short default_fg_prev_curses = translate_colour(default_fg_prev);
+    //short default_bg_prev_curses = translate_colour(default_bg_prev);
+    //short prev_default_pair = curs_calc_pair_safe(default_fg_prev_curses,
+        //default_bg_prev_curses, COLOR_WHITE, COLOR_BLACK);
+    //if (prev_default_pair != 0)
+    //{
+        //init_pair_safe(prev_default_pair, default_fg_prev_curses,
+            //default_bg_prev_curses);
+    //}
 
-    // Make sure the *default* default color pair has a home.
-    short new_default_default_pair = curs_calc_pair_safe(COLOR_WHITE,
-        COLOR_BLACK, translate_colour(default_fg),
-        translate_colour(default_bg));
-    if (new_default_default_pair != 0)
-        init_pair_safe(new_default_default_pair, COLOR_WHITE, COLOR_BLACK);
+    //// Make sure the *default* default color pair has a home.
+    //short new_default_default_pair = curs_calc_pair_safe(COLOR_WHITE,
+        //COLOR_BLACK, translate_colour(default_fg),
+        //translate_colour(default_bg));
+    //if (new_default_default_pair != 0)
+        //init_pair_safe(new_default_default_pair, COLOR_WHITE, COLOR_BLACK);
 }
 
 // see declaration
 static COLOURS curses_color_to_internal_colour(short col)
 {
-    switch (col)
-    {
-    case COLOR_BLACK:
-        return BLACK;
-    case COLOR_BLUE:
-        return BLUE;
-    case COLOR_GREEN:
-        return GREEN;
-    case COLOR_CYAN:
-        return CYAN;
-    case COLOR_RED:
-        return RED;
-    case COLOR_MAGENTA:
-        return MAGENTA;
-    case COLOR_YELLOW:
-        return BROWN;
-    case COLOR_WHITE:
-        return LIGHTGREY;
-    case (COLOR_BLACK | COLFLAG_CURSES_BRIGHTEN):
-        return DARKGREY;
-    case (COLOR_BLUE | COLFLAG_CURSES_BRIGHTEN):
-        return LIGHTBLUE;
-    case (COLOR_GREEN | COLFLAG_CURSES_BRIGHTEN):
-        return LIGHTGREEN;
-    case (COLOR_CYAN | COLFLAG_CURSES_BRIGHTEN):
-        return LIGHTCYAN;
-    case (COLOR_RED | COLFLAG_CURSES_BRIGHTEN):
-        return LIGHTRED;
-    case (COLOR_MAGENTA | COLFLAG_CURSES_BRIGHTEN):
-        return LIGHTMAGENTA;
-    case (COLOR_YELLOW | COLFLAG_CURSES_BRIGHTEN):
-        return YELLOW;
-    case (COLOR_WHITE | COLFLAG_CURSES_BRIGHTEN):
-        return WHITE;
-    default:
-        return GREEN;
-    }
+    //switch (col)
+    //{
+    //case COLOR_BLACK:
+        //return BLACK;
+    //case COLOR_BLUE:
+        //return BLUE;
+    //case COLOR_GREEN:
+        //return GREEN;
+    //case COLOR_CYAN:
+        //return CYAN;
+    //case COLOR_RED:
+        //return RED;
+    //case COLOR_MAGENTA:
+        //return MAGENTA;
+    //case COLOR_YELLOW:
+        //return BROWN;
+    //case COLOR_WHITE:
+        //return LIGHTGREY;
+    //case (COLOR_BLACK | COLFLAG_CURSES_BRIGHTEN):
+        //return DARKGREY;
+    //case (COLOR_BLUE | COLFLAG_CURSES_BRIGHTEN):
+        //return LIGHTBLUE;
+    //case (COLOR_GREEN | COLFLAG_CURSES_BRIGHTEN):
+        //return LIGHTGREEN;
+    //case (COLOR_CYAN | COLFLAG_CURSES_BRIGHTEN):
+        //return LIGHTCYAN;
+    //case (COLOR_RED | COLFLAG_CURSES_BRIGHTEN):
+        //return LIGHTRED;
+    //case (COLOR_MAGENTA | COLFLAG_CURSES_BRIGHTEN):
+        //return LIGHTMAGENTA;
+    //case (COLOR_YELLOW | COLFLAG_CURSES_BRIGHTEN):
+        //return YELLOW;
+    //case (COLOR_WHITE | COLFLAG_CURSES_BRIGHTEN):
+        //return WHITE;
+    //default:
+        //return GREEN;
+    //}
 }
 
 void textcolour(int col)
 {
-    if (!_headless_mode)
-    {
-        const auto style = curs_attr_fg(col);
-        attr_set(style.attr, style.color_pair, nullptr);
-    }
+    //if (!_headless_mode)
+    //{
+        //const auto style = curs_attr_fg(col);
+        //attr_set(style.attr, style.color_pair, nullptr);
+    //}
 
-#ifdef USE_TILE_WEB
-    tiles.textcolour(col);
-#endif
+//#ifdef USE_TILE_WEB
+    //tiles.textcolour(col);
+//#endif
 }
 
 COLOURS default_hover_colour()
@@ -1601,40 +1691,44 @@ COLOURS default_hover_colour()
     // n.b. if your menu uses just one color, and you set that as the hover,
     // you will get automatic color inversion. That is generally the safest
     // option where possible.
-    return (curs_can_use_extended_colors() || Options.blink_brightens_background)
-                 ? DARKGREY : BLUE;
+    return DARKGREY;
+    //return (curs_can_use_extended_colors() || Options.blink_brightens_background)
+                 //? DARKGREY : BLUE;
 }
 
 void textbackground(int col)
 {
-    if (!_headless_mode)
-    {
-        const auto style = curs_attr_bg(col);
-        attr_set(style.attr, style.color_pair, nullptr);
-    }
+    //if (!_headless_mode)
+    //{
+        //const auto style = curs_attr_bg(col);
+        //attr_set(style.attr, style.color_pair, nullptr);
+    //}
 
-#ifdef USE_TILE_WEB
-    tiles.textbackground(col);
-#endif
+//#ifdef USE_TILE_WEB
+    //tiles.textbackground(col);
+//#endif
 }
 
 void gotoxy_sys(int x, int y)
 {
-    if (_headless_mode)
-    {
-        headless_x = x;
-        headless_y = y;
-    }
-    else
-        move(y - 1, x - 1);
+    curX = x;
+    curY = y;
+    //if (_headless_mode)
+    //{
+        //headless_x = x;
+        //headless_y = y;
+    //}
+    //else
+        //move(y - 1, x - 1);
 }
 
 static inline cchar_t character_at(int y, int x)
 {
-    cchar_t c;
-    // (void) is to hush an incorrect clang warning.
-    (void)mvin_wch(y, x, &c);
-    return c;
+    return screenArray[y][x];
+    //cchar_t c;
+    //// (void) is to hush an incorrect clang warning.
+    //(void)mvin_wch(y, x, &c);
+    //return c;
 }
 
 /**
@@ -1649,163 +1743,170 @@ static inline cchar_t character_at(int y, int x)
  */
 static void write_char_at(int y, int x, const cchar_t &ch)
 {
-    attr_t attr = 0;
-    short color_pair = 0;
-    wchar_t *wch = nullptr;
+    curX = x;
+    curY = y;
+    screenArray[y][x] = ch;
 
-    // Make sure to allocate enough space for the characters.
-    int chars_to_allocate = getcchar(&ch, nullptr, &attr, &color_pair, nullptr);
-    if (chars_to_allocate > 0)
-        wch = new wchar_t[chars_to_allocate];
+    //attr_t attr = 0;
+    //short color_pair = 0;
+    //wchar_t *wch = nullptr;
 
-    // Good to go. Grab the color / attr info.
-    getcchar(&ch, wch, &attr, &color_pair, nullptr);
+    //// Make sure to allocate enough space for the characters.
+    //int chars_to_allocate = getcchar(&ch, nullptr, &attr, &color_pair, nullptr);
+    //if (chars_to_allocate > 0)
+        //wch = new wchar_t[chars_to_allocate];
 
-    // Clean up.
-    if (chars_to_allocate > 0)
-        delete [] wch;
+    //// Good to go. Grab the color / attr info.
+    ////getcchar(&ch, wch, &attr, &color_pair, nullptr);
 
-    attr_set(attr, color_pair, nullptr);
-    mvadd_wchnstr(y, x, &ch, 1);
+    //// Clean up.
+    //if (chars_to_allocate > 0)
+        //delete [] wch;
+
+    //attr_set(attr, color_pair, nullptr);
+    //mvadd_wchnstr(y, x, &ch, 1);
 }
 
 static void init_pair_safe(short pair, short f, short b)
 {
-    if (Options.use_terminal_default_colours)
-    {
-        short _f = (f == COLOR_WHITE) ? -1 : f;
-        short _b = (b == COLOR_BLACK) ? -1 : b;
-        init_pair(pair, _f, _b);
-    }
-    else
-        init_pair(pair, f, b);
+    //init_pair(pair, f, b);
+    //if (Options.use_terminal_default_colours)
+    //{
+        //short _f = (f == COLOR_WHITE) ? -1 : f;
+        //short _b = (b == COLOR_BLACK) ? -1 : b;
+        //init_pair(pair, _f, _b);
+    //}
+    //else
+        //init_pair(pair, f, b);
 }
 
 // see declaration
 static void flip_colour(cchar_t &ch)
 {
-    attr_t attr = 0;
-    short color_pair = 0;
-    wchar_t *wch = nullptr;
+    //attr_t attr = 0;
+    //short color_pair = 0;
+    //wchar_t *wch = nullptr;
 
-    // Make sure to allocate enough space for the characters.
-    int chars_to_allocate = getcchar(&ch, nullptr, &attr,
-        &color_pair, nullptr);
-    if (chars_to_allocate > 0)
-        wch = new wchar_t[chars_to_allocate];
+    //// Make sure to allocate enough space for the characters.
+    //int chars_to_allocate = getcchar(&ch, nullptr, &attr,
+        //&color_pair, nullptr);
+    //if (chars_to_allocate > 0)
+        //wch = new wchar_t[chars_to_allocate];
 
-    // Good to go. Grab the color / attr info.
-    curses_style style;
-    getcchar(&ch, wch, &style.attr, &style.color_pair, nullptr);
-    style = flip_colour(style);
+    //// Good to go. Grab the color / attr info.
+    //curses_style style;
+    //getcchar(&ch, wch, &style.attr, &style.color_pair, nullptr);
+    //style = flip_colour(style);
 
-    // Assign the new, reversed info and clean up.
-    setcchar(&ch, wch, style.attr, style.color_pair, nullptr);
-    if (chars_to_allocate > 0)
-        delete [] wch;
+    //// Assign the new, reversed info and clean up.
+    //setcchar(&ch, wch, style.attr, style.color_pair, nullptr);
+    //if (chars_to_allocate > 0)
+        //delete [] wch;
 }
 
 // see declaration
 static curses_style flip_colour(curses_style style)
 {
-    short fg = COLOR_WHITE;
-    short bg = COLOR_BLACK;
+    //short fg = COLOR_WHITE;
+    //short bg = COLOR_BLACK;
 
-    if (style.color_pair != 0)
-        pair_content(style.color_pair, &fg, &bg);
-    else
-    {
-        // Default pair; use the current default colors.
-        fg = translate_colour(FG_COL_DEFAULT);
-        bg = translate_colour(BG_COL_DEFAULT);
-    }
+    //if (style.color_pair != 0)
+        //pair_content(style.color_pair, &fg, &bg);
+    //else
+    //{
+        //// Default pair; use the current default colors.
+        //fg = translate_colour(FG_COL_DEFAULT);
+        //bg = translate_colour(BG_COL_DEFAULT);
+    //}
 
-    bool need_attribute_only_flip = !curs_color_combo_has_pair(bg, fg);
+    //bool need_attribute_only_flip = !curs_color_combo_has_pair(bg, fg);
 
-    // Adjust brightness flags for low-color modes.
-    if (!curs_can_use_extended_colors())
-    {
-        // Check if these were brightened colours.
-        if (style.attr & WA_BOLD)
-            fg |= COLFLAG_CURSES_BRIGHTEN;
-        if (style.attr & WA_BLINK)
-            bg |= COLFLAG_CURSES_BRIGHTEN;
-        style.attr &= ~(WA_BOLD | WA_BLINK);
-    }
+    //// Adjust brightness flags for low-color modes.
+    //if (!curs_can_use_extended_colors())
+    //{
+        //// Check if these were brightened colours.
+        //if (style.attr & WA_BOLD)
+            //fg |= COLFLAG_CURSES_BRIGHTEN;
+        //if (style.attr & WA_BLINK)
+            //bg |= COLFLAG_CURSES_BRIGHTEN;
+        //style.attr &= ~(WA_BOLD | WA_BLINK);
+    //}
 
-    if (!need_attribute_only_flip)
-    {
-        // Perform a flip using the inverse color pair, preferring to adjust
-        // the background color in case of a conflict.
-        const auto out = curs_attr(curses_color_to_internal_colour(bg),
-                                   curses_color_to_internal_colour(fg), true);
-        style.color_pair = out.color_pair;
-        style.attr |= out.attr;
-    }
-    else
-    {
-        // The best we can do is a purely attribute-based flip.
+    //if (!need_attribute_only_flip)
+    //{
+        //// Perform a flip using the inverse color pair, preferring to adjust
+        //// the background color in case of a conflict.
+        //const auto out = curs_attr(curses_color_to_internal_colour(bg),
+                                   //curses_color_to_internal_colour(fg), true);
+        //style.color_pair = out.color_pair;
+        //style.attr |= out.attr;
+    //}
+    //else
+    //{
+        //// The best we can do is a purely attribute-based flip.
 
-        // Swap potential brightness flags.
-        if (!curs_can_use_extended_colors())
-        {
-            if ((fg & COLFLAG_CURSES_BRIGHTEN)
-                && (Options.blink_brightens_background
-                    || Options.best_effort_brighten_background))
-            {
-                style.attr |= WA_BLINK;
-            }
-            // XX I don't *think* this logic should apply for
-            // bold_brightens_foreground = force...
-            if ((bg & COLFLAG_CURSES_BRIGHTEN)
-                && (Options.bold_brightens_foreground != false
-                    || Options.best_effort_brighten_foreground))
-            {
-                style.attr |= WA_BOLD;
-            }
-        }
+        //// Swap potential brightness flags.
+        //if (!curs_can_use_extended_colors())
+        //{
+            //if ((fg & COLFLAG_CURSES_BRIGHTEN)
+                //&& (Options.blink_brightens_background
+                    //|| Options.best_effort_brighten_background))
+            //{
+                //style.attr |= WA_BLINK;
+            //}
+            //// XX I don't *think* this logic should apply for
+            //// bold_brightens_foreground = force...
+            //if ((bg & COLFLAG_CURSES_BRIGHTEN)
+                //&& (Options.bold_brightens_foreground != false
+                    //|| Options.best_effort_brighten_foreground))
+            //{
+                //style.attr |= WA_BOLD;
+            //}
+        //}
 
-        style.attr ^= WA_REVERSE;
-    }
+        //style.attr ^= WA_REVERSE;
+    //}
 
-    return style;
+    //return style;
 }
 
 void fakecursorxy(int x, int y)
 {
-    if (_headless_mode)
-    {
-        gotoxy_sys(x, y);
-        set_cursor_region(GOTO_CRT);
-        return;
-    }
+    //if (_headless_mode)
+    //{
+        //gotoxy_sys(x, y);
+        //set_cursor_region(GOTO_CRT);
+        //return;
+    //}
 
-    int x_curses = x - 1;
-    int y_curses = y - 1;
+    //int x_curses = x - 1;
+    //int y_curses = y - 1;
 
-    cchar_t c = character_at(y_curses, x_curses);
-    flip_colour(c);
-    write_char_at(y_curses, x_curses, c);
-    // the above still results in changes to the return values for wherex and
-    // wherey, so set the cursor region to ensure that the cursor position is
-    // valid after this call. (This also matches the behavior of real cursorxy.)
-    set_cursor_region(GOTO_CRT);
+    //cchar_t c = character_at(y_curses, x_curses);
+    //flip_colour(c);
+    //write_char_at(y_curses, x_curses, c);
+    //// the above still results in changes to the return values for wherex and
+    //// wherey, so set the cursor region to ensure that the cursor position is
+    //// valid after this call. (This also matches the behavior of real cursorxy.)
+    //set_cursor_region(GOTO_CRT);
 }
 
 int wherex()
 {
-    if (_headless_mode)
-        return headless_x;
-    else
-        return getcurx(stdscr) + 1;
+    return curX;
+    //if (_headless_mode)
+        //return headless_x;
+    //else
+        //return getcurx(stdscr) + 1;
 }
 
 int wherey()
 {
-    if (_headless_mode)
-        return headless_y;
-    else
-        return getcury(stdscr) + 1;
+    return curY;
+    //if (_headless_mode)
+        //return headless_y;
+    //else
+        //return getcury(stdscr) + 1;
 }
 
 void delay(unsigned int time)
@@ -1822,7 +1923,7 @@ void delay(unsigned int time)
     }
 #endif
 
-    refresh();
+    //refresh();
     if (time)
         usleep(time * 1000);
 }
@@ -1849,38 +1950,39 @@ static bool _headless_kbhit()
 /* This is Juho Snellman's modified kbhit, to work with macros */
 bool kbhit()
 {
-    if (_headless_mode)
-        return _headless_kbhit();
+    return false;
+    //if (_headless_mode)
+        //return _headless_kbhit();
 
-    if (pending)
-        return true;
+    //if (pending)
+        //return true;
 
-    wint_t c;
-#ifndef USE_TILE_WEB
-    int i;
+    //wint_t c;
+//#ifndef USE_TILE_WEB
+    //int i;
 
-    nodelay(stdscr, TRUE);
-    timeout(0);  // apparently some need this to guarantee non-blocking -- bwr
-    i = get_wch(&c);
-    nodelay(stdscr, FALSE);
+    //nodelay(stdscr, TRUE);
+    //timeout(0);  // apparently some need this to guarantee non-blocking -- bwr
+    //i = get_wch(&c);
+    //nodelay(stdscr, FALSE);
 
-    switch (i)
-    {
-    case OK:
-        pending = c;
-        return true;
-    case KEY_CODE_YES:
-        pending = -c;
-        return true;
-    default:
-        return false;
-    }
-#else
-    bool result = tiles.await_input(c, false);
+    //switch (i)
+    //{
+    //case OK:
+        //pending = c;
+        //return true;
+    //case KEY_CODE_YES:
+        //pending = -c;
+        //return true;
+    //default:
+        //return false;
+    //}
+//#else
+    //bool result = tiles.await_input(c, false);
 
-    if (result && c != 0)
-        pending = c;
+    //if (result && c != 0)
+        //pending = c;
 
-    return result;
-#endif
+    //return result;
+//#endif
 }
