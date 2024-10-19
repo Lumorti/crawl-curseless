@@ -1,453 +1,879 @@
 /**
  * @file
- * @brief Functions for windows console mode support.
+ * @brief Functions for unix and curses support
 **/
+
+/* Emulation of ancient Borland conio.
+   Some of these are inspired by/stolen from the Linux-conio package
+   by Mental EXPlotion. Hope you guys don't mind.
+   The colour exchange system is perhaps a little overkill, but I wanted
+   it to be general to support future changes.. The only thing not
+   supported properly is black on black (used by curses for "normal" mode)
+   and white on white (used by me for "bright black" (darkgrey) on black
+
+   Jan 1998 Svante Gerhard <svante@algonet.se>                          */
 
 #include "AppHdr.h"
 
-#if defined(TARGET_OS_WINDOWS) && !defined(USE_TILE_LOCAL)
+#define _LIBUNIX_IMPLEMENTATION
+#include "libunix.h"
 
-// WINDOWS INCLUDES GO HERE
-/*
- * Exclude parts of windows.h that are not needed
- */
-#define NOCOMM            /* Comm driver APIs and definitions */
-#define NOLOGERROR        /* LogError() and related definitions */
-#define NOPROFILER        /* Profiler APIs */
-#define NOLFILEIO         /* _l* file I/O routines */
-#define NOOPENFILE        /* OpenFile and related definitions */
-#define NORESOURCE        /* Resource management */
-#define NOATOM            /* Atom management */
-#define NOLANGUAGE        /* Character test routines */
-#define NOLSTRING         /* lstr* string management routines */
-#define NODBCS            /* Double-byte character set routines */
-#define NOKEYBOARDINFO    /* Keyboard driver routines */
-#define NOCOLOR           /* COLOR_* colour values */
-#define NODRAWTEXT        /* DrawText() and related definitions */
-#define NOSCALABLEFONT    /* Truetype scalable font support */
-#define NOMETAFILE        /* Metafile support */
-#define NOSYSTEMPARAMSINFO /* SystemParametersInfo() and SPI_* definitions */
-#define NODEFERWINDOWPOS  /* DeferWindowPos and related definitions */
-#define NOKEYSTATES       /* MK_* message key state flags */
-#define NOWH              /* SetWindowsHook and related WH_* definitions */
-#define NOCLIPBOARD       /* Clipboard APIs and definitions */
-#define NOICONS           /* IDI_* icon IDs */
-#define NOMDI             /* MDI support */
-#define NOCTLMGR          /* Control management and controls */
-#define NOHELP            /* Help support */
-/*
- * Exclude parts of windows.h that are not needed (Win32)
- */
-#define WIN32_LEAN_AND_MEAN
-#define NONLS             /* All NLS defines and routines */
-#define NOSERVICE         /* All Service Controller routines, SERVICE_ equates, etc. */
-#define NOKANJI           /* Kanji support stuff. */
-#define NOMCX             /* Modem Configuration Extensions */
+#include <iostream>
+#include <cassert>
+#include <cctype>
+#include <clocale>
+#include <cstdarg>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cwchar>
+//#include <langinfo.h>
+//#include <term.h>
+//#include <termios.h>
+#include <unistd.h>
 
-#include <excpt.h>
-#include <stdarg.h>
-#include <windows.h>
-#undef max
-#undef S_NORMAL
+#include "colour.h"
+#include "cio.h"
+#include "crash.h"
+#include "libutil.h"
+#include "state.h"
+#include "tiles-build-specific.h"
+#include "unicode.h"
+#include "version.h"
+#include "view.h"
+#include "ui.h"
 
-// END -- WINDOWS INCLUDES
+//static struct termios def_term;
+//static struct termios game_term;
 
-#ifdef TARGET_COMPILER_MINGW
+#ifdef USE_UNIX_SIGNALS
 #include <signal.h>
 #endif
 
-#include <string.h>
-#include <stdio.h>
+#include <time.h>
 
-#include "cio.h"
-#include "defines.h"
-#include "libutil.h"
-#include "options.h"
-#include "state.h"
-#include "unicode.h"
-#include "version.h"
-#include "viewgeom.h"
-#include "view.h"
+// replace definitions from curses.h; not needed outside this file
+#define HEADLESS_LINES 24
+#define HEADLESS_COLS 80
 
-wchar_t oldTitle[80];
+// TODO1
+#define cchar_t char32_t
+std::vector<std::vector<cchar_t>> screenArray;
+int curX = 0;
+int curY = 0;
 
-static HANDLE inbuf = nullptr;
-static HANDLE outbuf = nullptr;
-static HANDLE old_outbuf = nullptr;
-static int current_colour = -1;
-static bool cursor_is_enabled = false;
-static CONSOLE_CURSOR_INFO initial_cci;
-static bool have_initial_cci = false;
-// dirty line (sx,ex,y)
-static int chsx = 0, chex = 0, chy = -1;
-// cursor position (start at 0,0 --> 1,1)
-static int cx = 0, cy = 0;
+// for some reason we use 1 indexing internally
+//static int headless_x = 1;
+//static int headless_y = 1;
 
-// and now, for the screen buffer
-static CHAR_INFO *screen = nullptr;
-static COORD screensize;
-#define SCREENINDEX(x,y) ((x)+screensize.X*(y))
-static unsigned InputCP, OutputCP;
-static const unsigned PREFERRED_CODEPAGE = 437;
+// Its best if curses comes at the end (name conflicts with Solaris). -- bwr
+//#ifndef CURSES_INCLUDE_FILE
+    //#ifndef _XOPEN_SOURCE_EXTENDED
+    //#define _XOPEN_SOURCE_EXTENDED
+    //#endif
 
-// we can do straight translation of DOS colour to win32 console colour.
-#define WIN32COLOR(col) (WORD)(col)
-static void writeChar(char32_t c);
-static void bFlush();
+    //#include <curses.h>
+//#else
+    //#include CURSES_INCLUDE_FILE
+//#endif
 
-// [ds] Unused for portability reasons
-/*
-static DWORD crawlColorData[16] =
-// BGR data, easier to put in registry
-{
-    0x00000000,  // BLACK
-    0x00ff00cd,  // BLUE
-    0x0046b964,  // GREEN
-    0x00b4b400,  // CYAN
-    0x000085ff,  // RED
-    0x00ee82ee,  // MAGENTA
-    0x005a6fcd,  // BROWN
-    0x00c0c0c0,  // LT GREY
-    0x00808080,  // DK GREY
-    0x00ff8600,  // LT BLUE
-    0x0000ff85,  // LT GREEN
-    0x00ffff00,  // LT CYAN
-    0x000000ff,  // LT RED
-    0x00bf7091,  // LT MAGENTA
-    0x0000ffff,  // YELLOW
-    0x00ffffff   // WHITE
-};
- */
+static bool _headless_mode = false;
+bool in_headless_mode() { return _headless_mode; }
+void enter_headless_mode() { _headless_mode = true; }
 
+// Globals holding current text/backg. colours
+// Note that these are internal colours, *not* curses colors.
 /** @brief The current foreground @em colour. */
-static COLOURS FG_COL = LIGHTGREY;
+//static COLOURS FG_COL = LIGHTGREY;
+
+/** @brief The default foreground @em colour. */
+//static COLOURS FG_COL_DEFAULT = LIGHTGREY;
 
 /** @brief The current background @em colour. */
-static COLOURS BG_COL = BLACK;
+//static COLOURS BG_COL = BLACK;
 
-void enter_headless_mode() { }
-bool in_headless_mode() { return false; }
+/** @brief The default background @em colour. */
+//static COLOURS BG_COL_DEFAULT = BLACK;
 
-void writeChar(char32_t c)
+struct curses_style
 {
-    if (c == '\t')
-    {
-        for (int i = 0; i < 8; ++i)
-            writeChar(' ');
-        return;
-    }
+    //attr_t attr;
+    short color_pair;
+};
 
-    bool noop = true;
-    PCHAR_INFO pci;
+/**
+ * @brief Can extended colors be used directly instead of character attributes?
+ *
+ * @return
+ *  True if extended colors can be used in lieu of attributes, false otherwise.
+ */
+static bool curs_can_use_extended_colors();
 
-    // check for CR: noop
-    if (c == 0x0D)
-        return;
+/**
+ * @brief Write a complex curses character to specified screen location.
+ *
+ * There are two additional effects of this function:
+ *  - The screen's character attributes are set to those contained in @p ch.
+ *  - The cursor is moved to the passed coordinate.
+ *
+ * @param y
+ *  The y-component of the location to draw @p ch.
+ * @param x
+ *  The x-component of the location to draw @p ch.
+ * @param ch
+ *  The complex character to render.
+ */
+static void write_char_at(int y, int x, const cchar_t &ch);
 
-    // check for newline
-    if (c == 0x0A)
-    {
-        // must flush current buffer
-        bFlush();
+/**
+ * @brief Terminal default aware version of pair_safe.
+ *
+ * @param pair
+ *   Pair identifier
+ * @param f
+ *   Foreground colour
+ * @param b
+ *   Background colour
+ */
+//static void init_pair_safe(short pair, short f, short b);
 
-        // reposition
-        gotoxy_sys(1, cy+2);
-
-        return;
-    }
-
-    // check for upper Unicode which Windows can't handle
-    if (c > 0xFFFF)
-        c = U'\xbf'; //¿
-
-    int tc = WIN32COLOR(current_colour);
-    pci = &screen[SCREENINDEX(cx,cy)];
-
-    // is this a no-op?
-    if (pci->Char.UnicodeChar != c)
-        noop = false;
-    else if (pci->Attributes != tc)
-        noop = false;
-
-    if (!noop)
-    {
-        // write the info and update the dirty area
-        pci->Char.UnicodeChar = c;
-        pci->Attributes = tc;
-
-        if (chy < 0)
-            chsx = cx;
-        chy  = cy;
-        chex = cx;
-    }
-
-    // update x position
-    cx += 1;
-    if (cx >= screensize.X)
-        cx = screensize.X - 1;
-}
-
-void bFlush()
-{
-    COORD source;
-    SMALL_RECT target;
-
-    // see if we have a dirty area
-    if (chy < 0)
-        return;
-
-    // set up call
-    source.X = chsx;
-    source.Y = chy;
-
-    target.Left = chsx;
-    target.Top = chy;
-    target.Right = chex;
-    target.Bottom = chy;
-
-    WriteConsoleOutputW(outbuf, screen, screensize, source, &target);
-
-    chy = -1;
-
-    // if cursor is not NOCURSOR, update screen
-    if (cursor_is_enabled)
-    {
-        COORD xy;
-        xy.X = cx;
-        xy.Y = cy;
-        SetConsoleCursorPosition(outbuf, xy);
-    }
-}
+static bool cursor_is_enabled = true;
 
 void set_mouse_enabled(bool enabled)
 {
-    DWORD inmode;
-    if (::GetConsoleMode(inbuf, &inmode))
-    {
-        if (enabled)
-            inmode |= ENABLE_MOUSE_INPUT;
-        else
-            inmode &= ~ENABLE_MOUSE_INPUT;
-
-        ::SetConsoleMode(inbuf, inmode);
-    }
+    return;
+    enabled = !enabled;
+#ifdef NCURSES_MOUSE_VERSION
+    if (_headless_mode)
+        return;
+    const int mask = enabled ? ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION : 0;
+    mmask_t oldmask = 0;
+    mousemask(mask, &oldmask);
+#endif
 }
 
-static void _set_string_input(bool value)
+#ifdef NCURSES_MOUSE_VERSION
+static int proc_mouse_event(int c, const MEVENT *me)
 {
-    DWORD inmodes, outmodes;
-    if (value == TRUE)
+    UNUSED(c);
+
+    crawl_view.mousep.x = me->x + 1;
+    crawl_view.mousep.y = me->y + 1;
+
+    if (!crawl_state.mouse_enabled)
+        return CK_MOUSE_MOVE;
+
+    c_mouse_event cme(crawl_view.mousep);
+    if (me->bstate & BUTTON1_CLICKED)
+        cme.bstate |= c_mouse_event::BUTTON1;
+    else if (me->bstate & BUTTON1_DOUBLE_CLICKED)
+        cme.bstate |= c_mouse_event::BUTTON1_DBL;
+    else if (me->bstate & BUTTON2_CLICKED)
+        cme.bstate |= c_mouse_event::BUTTON2;
+    else if (me->bstate & BUTTON2_DOUBLE_CLICKED)
+        cme.bstate |= c_mouse_event::BUTTON2_DBL;
+    else if (me->bstate & BUTTON3_CLICKED)
+        cme.bstate |= c_mouse_event::BUTTON3;
+    else if (me->bstate & BUTTON3_DOUBLE_CLICKED)
+        cme.bstate |= c_mouse_event::BUTTON3_DBL;
+    else if (me->bstate & BUTTON4_CLICKED)
+        cme.bstate |= c_mouse_event::BUTTON4;
+    else if (me->bstate & BUTTON4_DOUBLE_CLICKED)
+        cme.bstate |= c_mouse_event::BUTTON4_DBL;
+
+    if (cme)
     {
-        inmodes = ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT
-                     | ENABLE_PROCESSED_INPUT
-                     | ENABLE_MOUSE_INPUT
-                     | ENABLE_WINDOW_INPUT;
-        outmodes = ENABLE_PROCESSED_OUTPUT;
-    }
-    else
-    {
-        inmodes = ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT;
-        outmodes = 0;
+        new_mouse_event(cme);
+        return CK_MOUSE_CLICK;
     }
 
-    if (SetConsoleMode(inbuf, inmodes) == 0)
-    {
-        fputs("Error initialising console input mode.", stderr);
-        exit(0);
-    }
-
-    if (SetConsoleMode(outbuf, outmodes) == 0)
-    {
-        fputs("Error initialising console output mode.", stderr);
-        exit(0);
-    }
-
-    // now flush it
-    FlushConsoleInputBuffer(inbuf);
-}
-
-// Fake the user pressing Esc to break out of wait-for-input loops.
-// Just one should be enough as we check the seen_hups flag, we just
-// need to interrupt the syscall.
-void w32_insert_escape()
-{
-    INPUT_RECORD esc;
-    esc.EventType = KEY_EVENT;
-    esc.Event.KeyEvent.bKeyDown = TRUE;
-    esc.Event.KeyEvent.wRepeatCount = 1;
-    esc.Event.KeyEvent.wVirtualKeyCode = VK_ESCAPE;
-    // .wVirtualScanCode ?
-    esc.Event.KeyEvent.uChar.UnicodeChar = ESCAPE;
-    esc.Event.KeyEvent.dwControlKeyState = 0;
-    WriteConsoleInputW(inbuf, &esc, 1, nullptr);
-}
-
-#ifdef TARGET_COMPILER_MINGW
-static void install_sighandlers()
-{
-    signal(SIGINT, SIG_IGN);
+    return CK_MOUSE_MOVE;
 }
 #endif
 
-static void set_w32_screen_size()
+//static int pending = 0;
+
+static int _get_key_from_curses()
 {
-    CONSOLE_SCREEN_BUFFER_INFO cinf;
-    if (::GetConsoleScreenBufferInfo(outbuf, &cinf))
-    {
-        screensize.X = cinf.srWindow.Right - cinf.srWindow.Left + 1;
-        screensize.Y = cinf.srWindow.Bottom - cinf.srWindow.Top + 1;
-    }
-    else
-    {
-        screensize.X = 80;
-        screensize.Y = 25;
+//#ifdef WATCHDOG
+    //// If we have (or wait for) actual keyboard input, it's not an infinite
+    //// loop.
+    //watchdog();
+//#endif
+
+    //if (pending)
+    //{
+        //int c = pending;
+        //pending = 0;
+        //return c;
+    //}
+
+    //wint_t c;
+
+//#ifdef USE_TILE_WEB
+    //refresh();
+
+    //tiles.redraw();
+    //tiles.await_input(c, true);
+
+    //if (c != 0)
+        //return c;
+//#endif
+
+    //switch (get_wch(&c))
+    //{
+    //case ERR:
+        //// getch() returns -1 on EOF, convert that into an Escape. Evil hack,
+        //// but the alternative is to explicitly check for -1 everywhere where
+        //// we might otherwise spin in a tight keyboard input loop.
+        //return ESCAPE;
+    //case OK:
+        //// a normal (printable) key
+        //return c;
+    //}
+
+    //return -c;
+
+    std::string str;
+    std::getline(std::cin, str);
+    //switch (str)
+    //{
+        //case "up":
+            //return CK_UP;
+        //case "left":
+            //return CK_LEFT;
+        //case "down":
+            //return CK_DOWN;
+        //case "right":
+            //return CK_RIGHT;
+        //case "backspace":
+            //return CK_BKSP;
+        //case "delete":
+            //return CK_DELETE;
+        //case "space":
+            //return CK_SPACE;
+        //case "escape":
+            //return ESCAPE;
+        //case "enter":
+            //return CK
+        //default:
+            //return str[0];
+    //}
+    if (str == "up") {
+        return CK_UP;
+    } else if (str == "left") {
+        return CK_LEFT;
+    } else if (str == "down") {
+        return CK_DOWN;
+    } else if (str == "right") {
+        return CK_RIGHT;
+    } else if (str == "backspace") {
+        return CK_BKSP;
+    } else if (str == "delete") {
+        return CK_DELETE;
+    } else if (str == "escape") {
+        return ESCAPE;
+    } else if (str == "enter") {
+        return CK_ENTER;
+    } else if (str == "exit") {
+        return CONTROL('S');
+    } else {
+        return str[0];
     }
 
-    if (screen)
-    {
-        delete [] screen;
-        screen = nullptr;
-    }
-
-    screen = new CHAR_INFO[screensize.X * screensize.Y];
-
-    COORD topleft;
-    SMALL_RECT used;
-    topleft.X = topleft.Y = 0;
-    ::ReadConsoleOutputW(outbuf, screen, screensize, topleft, &used);
 }
 
-static void w32_handle_resize_event()
+#if defined(KEY_RESIZE) || defined(USE_UNIX_SIGNALS)
+static void unix_handle_resize_event(int event)
 {
+    event = event;
+    crawl_state.last_winch = time(0);
     if (crawl_state.waiting_for_command)
         handle_terminal_resize();
     else
         crawl_state.terminal_resized = true;
 }
+#endif
 
-static void w32_check_screen_resize()
+static bool getch_returns_resizes;
+void set_getch_returns_resizes(bool rr)
 {
-    CONSOLE_SCREEN_BUFFER_INFO cinf;
-    if (::GetConsoleScreenBufferInfo(outbuf, &cinf))
-    {
-        if (screensize.X != cinf.srWindow.Right - cinf.srWindow.Left + 1
-            || screensize.Y != cinf.srWindow.Bottom - cinf.srWindow.Top + 1)
-        {
-            w32_handle_resize_event();
-        }
-    }
+    getch_returns_resizes = rr;
 }
 
-static void w32_term_resizer()
+//static int _headless_getchk()
+//{
+//#ifdef WATCHDOG
+    //// If we have (or wait for) actual keyboard input, it's not an infinite
+    //// loop.
+    //watchdog();
+//#endif
+
+    //if (pending)
+    //{
+        //int c = pending;
+        //pending = 0;
+        //return c;
+    //}
+
+
+//#ifdef USE_TILE_WEB
+    //wint_t c;
+    //tiles.redraw();
+    //tiles.await_input(c, true);
+
+    //if (c != 0)
+        //return c;
+//#endif
+
+    //return ESCAPE; // TODO: ??
+//}
+
+//static int _headless_getch_ck()
+//{
+    //int c;
+    //do
+    //{
+        //c = _headless_getchk();
+        //// TODO: release?
+        //// XX this should possibly sleep
+    //} while (
+             //((c == CK_MOUSE_MOVE || c == CK_MOUSE_CLICK)
+                 //&& !crawl_state.mouse_enabled));
+
+    //return c;
+//}
+
+int getch_ck()
 {
-    set_w32_screen_size();
-    crawl_view.init_geometry();
+    int c = _get_key_from_curses();
+    return c;
+
+//#ifdef KEY_RESIZE
+        //case KEY_RESIZE:    return CK_RESIZE;
+//#endif
+
+    //if (_headless_mode)
+        //return _headless_getch_ck();
+
+    //while (true)
+    //{
+        //int c = _get_key_from_curses();
+
+//#ifdef NCURSES_MOUSE_VERSION
+        //if (c == -KEY_MOUSE)
+        //{
+            //MEVENT me;
+            //getmouse(&me);
+            //c = proc_mouse_event(c, &me);
+
+            //if (!crawl_state.mouse_enabled)
+                //continue;
+        //}
+//#endif
+
+//#ifdef KEY_RESIZE
+        //if (c == -KEY_RESIZE)
+        //{
+            //unix_handle_resize_event();
+
+            //// XXX: Before ncurses get_wch() returns KEY_RESIZE, it
+            //// updates LINES and COLS to the new window size. The resize
+            //// handler will only redraw the whole screen if the main view
+            //// is being shown, for slightly insane reasons, which results
+            //// in crawl_view.termsz being out of sync.
+            ////
+            //// This causes crashiness: e.g. in a menu, make the window taller,
+            //// then scroll down one line. To fix this, we always sync termsz:
+            //crawl_view.init_geometry();
+
+            //if (!getch_returns_resizes)
+                //continue;
+        //}
+//#endif
+
+        //switch (-c)
+        //{
+        //case 127:
+        //// 127 is ASCII DEL, which some terminals (all mac, some linux) use for
+        //// the backspace key. ncurses does not typically map this to
+        //// KEY_BACKSPACE (though this may depend on TERM settings?). '\b' (^H)
+        //// in contrast should be handled automatically. Note that ASCII DEL
+        //// is distinct from the standard esc code for del, esc[3~, which
+        //// reliably does get mapped to KEY_DC by ncurses. Some background:
+        ////     https://invisible-island.net/xterm/xterm.faq.html#xterm_erase
+        //// (I've never found documentation for the mac situation.)
+        //case KEY_BACKSPACE: return CK_BKSP;
+        //case KEY_IC:        return CK_INSERT;
+        //case KEY_DC:        return CK_DELETE;
+        //case KEY_HOME:      return CK_HOME;
+        //case KEY_END:       return CK_END;
+        //case KEY_PPAGE:     return CK_PGUP;
+        //case KEY_NPAGE:     return CK_PGDN;
+        //case KEY_UP:        return CK_UP;
+        //case KEY_DOWN:      return CK_DOWN;
+        //case KEY_LEFT:      return CK_LEFT;
+        //case KEY_RIGHT:     return CK_RIGHT;
+        //case KEY_BEG:       return CK_CLEAR;
+
+        //case KEY_BTAB:      return CK_SHIFT_TAB;
+        //case KEY_SDC:       return CK_SHIFT_DELETE;
+        //case KEY_SHOME:     return CK_SHIFT_HOME;
+        //case KEY_SEND:      return CK_SHIFT_END;
+        //case KEY_SPREVIOUS: return CK_SHIFT_PGUP;
+        //case KEY_SNEXT:     return CK_SHIFT_PGDN;
+        //case KEY_SR:        return CK_SHIFT_UP;
+        //case KEY_SF:        return CK_SHIFT_DOWN;
+        //case KEY_SLEFT:     return CK_SHIFT_LEFT;
+        //case KEY_SRIGHT:    return CK_SHIFT_RIGHT;
+
+        //case KEY_A1:        return CK_NUMPAD_7;
+        //case KEY_A3:        return CK_NUMPAD_9;
+        //case KEY_B2:        return CK_NUMPAD_5;
+        //case KEY_C1:        return CK_NUMPAD_1;
+        //case KEY_C3:        return CK_NUMPAD_3;
+
+//#ifdef KEY_RESIZE
+        //case KEY_RESIZE:    return CK_RESIZE;
+//#endif
+
+        //// Undocumented ncurses control keycodes, here be dragons!!!
+        //case 515:           return CK_CTRL_DELETE; // Mac
+        //case 526:           return CK_CTRL_DELETE; // Linux
+        //case 542:           return CK_CTRL_HOME;
+        //case 537:           return CK_CTRL_END;
+        //case 562:           return CK_CTRL_PGUP;
+        //case 557:           return CK_CTRL_PGDN;
+        //case 573:           return CK_CTRL_UP;
+        //case 532:           return CK_CTRL_DOWN;
+        //case 552:           return CK_CTRL_LEFT;
+        //case 567:           return CK_CTRL_RIGHT;
+
+        //default:            return c;
+        //}
+    //}
 }
+
+//static void unix_handle_terminal_resize()
+//{
+    //console_shutdown();
+    //console_startup();
+//}
+
+//static void unixcurses_defkeys()
+//{
+//#ifdef NCURSES_VERSION
+    //// To debug these on a specific terminal, you can use `cat -v` to see what
+    //// escape codes are being printed. To some degree it's better to let ncurses
+    //// do what it can rather than hard-coding things, but that doesn't always
+    //// work.
+    //// cool trick: `printf '\033[?1061h\033='; cat -v` initializes application
+    //// mode if the terminal supports it. (For some terminals, it may need to
+    //// be explicitly allowed, or enable via numlock.)
+
+    //// keypad 0-9 (only if the "application mode" was successfully initialised)
+    //define_key("\033Op", 1000);
+    //define_key("\033Oq", 1001);
+    //define_key("\033Or", 1002);
+    //define_key("\033Os", 1003);
+    //define_key("\033Ot", 1004);
+    //define_key("\033Ou", 1005);
+    //define_key("\033Ov", 1006);
+    //define_key("\033Ow", 1007);
+    //define_key("\033Ox", 1008);
+    //define_key("\033Oy", 1009);
+
+    //// non-arrow keypad keys (for macros)
+    //define_key("\033OM", 1010); // keypad enter
+
+    //// TODO: I don't know under what context these four are mapped to numpad
+    //// keys, but they are *much* more commonly used for F1-F4. So don't
+    //// unconditionally define these. But these mappings have been around for
+    //// a while, so I'm hesitant to remove them...
+//#define check_define_key(s, n) if (!key_defined(s)) define_key(s, n)
+    //check_define_key("\033OP", 1011); // NumLock
+    //check_define_key("\033OQ", 1012); // /
+    //check_define_key("\033OR", 1013); // *
+    //check_define_key("\033OS", 1014); // -
+
+    //// TODO: these could probably use further verification on linux
+    //// notes:
+    //// * this code doesn't like to map multiple esc sequences to the same
+    ////   keycode. However, doing so works fine on my testing on mac, on
+    ////   current ncurses. Why would this be bad?
+    //// * mac Terminal.app even in application mode does not shift =[>
+    //// * historically, several comments here were wrong on my testing, but
+    ////   they could be right somewhere. The current key descriptions are
+    ////   accurate as far as I can tell.
+    //define_key("\033Oj", 1015); // *
+    //define_key("\033Ok", 1016); // + (probably everything else except mac terminal)
+    //define_key("\033Ol", 1017); // + (mac terminal application mode)
+    //define_key("\033Om", 1018); // -
+    //define_key("\033On", 1019); // .
+    //define_key("\033Oo", 1012); // / (may conflict with the above define?)
+    //define_key("\033OX", 1021); // =, at least on mac console
+
+//# ifdef TARGET_OS_MACOSX
+    //// force some mappings for function keys that work on mac Terminal.app with
+    //// the default TERM value.
+
+    //// The following seem to be the rxvt escape codes, even
+    //// though Terminal.app defaults to xterm-256color.
+    //// TODO: would it be harmful to force this unconditionally?
+    //check_define_key("\033[25~", 277); // F13
+    //check_define_key("\033[26~", 278); // F14
+    //check_define_key("\033[28~", 279); // F15
+    //check_define_key("\033[29~", 280); // F16
+    //check_define_key("\033[31~", 281); // F17
+    //check_define_key("\033[32~", 282); // F18
+    //check_define_key("\033[33~", 283); // F19, highest key on a magic keyboard
+
+    //// not sure exactly what's up with these, but they exist by default:
+    //// ctrl bindings do too, but they are intercepted by macos
+    //check_define_key("\033b", -(CK_LEFT + CK_ALT_BASE));
+    //check_define_key("\033f", -(CK_RIGHT + CK_ALT_BASE));
+    //// (sadly, only left and right have modifiers by default on Terminal.app)
+//# endif
+//#undef check_define_key
+
+//#endif
+//}
+
+// Certain terminals support vt100 keypad application mode only after some
+// extra goading.
+#define KPADAPP "\033[?1051l\033[?1052l\033[?1060l\033[?1061h"
+#define KPADCUR "\033[?1051l\033[?1052l\033[?1060l\033[?1061l"
+
+//static void _headless_startup()
+//{
+    //// override the default behavior for SIGINT set in libutil.cc:init_signals.
+    //// TODO: windows ctrl-c? should be able to add a handler on top of
+    //// libutil.cc:console_handler
+//#if defined(USE_UNIX_SIGNALS) && defined(SIGINT)
+    //signal(SIGINT, handle_hangup);
+//#endif
+
+//#ifdef USE_TILE_WEB
+    //tiles.resize();
+//#endif
+//}
 
 void console_startup()
 {
-    inbuf = GetStdHandle(STD_INPUT_HANDLE);
-    old_outbuf = GetStdHandle(STD_OUTPUT_HANDLE);
-
-    // Create a new "console screen buffer" so we don't tramp all over
-    // the user's scrollback.
-    outbuf = CreateConsoleScreenBuffer(
-        GENERIC_READ |GENERIC_WRITE,
-        FILE_SHARE_READ | FILE_SHARE_WRITE, // shared
-        nullptr,                    // default security attributes
-        CONSOLE_TEXTMODE_BUFFER, // must be TEXTMODE
-        nullptr);                   // reserved; must be nullptr
-
-    SetConsoleActiveScreenBuffer(outbuf);
-
-    if (inbuf == INVALID_HANDLE_VALUE || outbuf == INVALID_HANDLE_VALUE)
-    {
-        fputs("Could not initialise libw32c console support.", stderr);
-        exit(0);
-    }
-
-    string title = CRAWL " " + string(Version::Long);
-
-    if (!GetConsoleTitleW(oldTitle, 78))
-        *oldTitle = 0;
-    SetConsoleTitleW(OUTW(title));
-
-    // Use the initial Windows setting for cursor size if it exists.
-    // TODO: Respect changing cursor size manually while Crawl is running.
-    have_initial_cci = GetConsoleCursorInfo(outbuf, &initial_cci);
-
-#ifdef TARGET_COMPILER_MINGW
-    install_sighandlers();
+    // Init the screen
+    screenArray = std::vector<std::vector<cchar_t>>(HEADLESS_LINES, std::vector<cchar_t>(HEADLESS_COLS, ' '));
+#if defined(USE_UNIX_SIGNALS) && defined(SIGINT)
+    //signal(SIGINT, handle_hangup);
 #endif
+#ifdef USE_UNIX_SIGNALS
+# ifndef KEY_RESIZE
+    //signal(SIGWINCH, unix_handle_resize_event);
+# endif
+#endif
+    crawl_view.init_geometry();
+    ui::resize(crawl_view.termsz.x, crawl_view.termsz.y);
+    return;
 
-    // by default, set string input to false:  use char-input only
-    _set_string_input(false);
+    //if (_headless_mode)
+    //{
+        //_headless_startup();
+        //return;
+    //}
+    //termio_init();
 
-    // set up screen size
-    set_w32_screen_size();
+//#ifdef CURSES_USE_KEYPAD
+    //// If hardening is enabled (default on recent distributions), glibc
+    //// declares write() with __attribute__((warn_unused_result)) which not
+    //// only spams when not relevant, but cannot even be selectively hushed
+    //// by (void) casts like all other such warnings.
+    //// "if ();" is an unsightly hack...
+    //if (write(1, KPADAPP, strlen(KPADAPP))) {};
+//#endif
 
-    // initialise text colour
-    textcolour(DARKGREY);
+//#ifdef USE_UNIX_SIGNALS
+//# ifndef KEY_RESIZE
+    //signal(SIGWINCH, unix_handle_resize_event);
+//# endif
+//#endif
 
-    cursor_is_enabled = true; // ensure cursor is set regardless of actual state
-    set_cursor_enabled(false);
+    //initscr();
+    //raw();
+    //noecho();
 
-    crawl_state.terminal_resize_handler = w32_term_resizer;
-    crawl_state.terminal_resize_check   = w32_check_screen_resize;
+    //nonl();
+    //intrflush(stdscr, FALSE);
+//#ifdef CURSES_USE_KEYPAD
+    //keypad(stdscr, TRUE);
 
-    // JWM, 06/12/2004: Code page setting, as XP does not use ANSI 437 by
-    // default.
-    InputCP = GetConsoleCP();
-    OutputCP = GetConsoleOutputCP();
+//# ifdef CURSES_SET_ESCDELAY
+//#  ifdef NCURSES_REENTRANT
+    //set_escdelay(CURSES_SET_ESCDELAY);
+//#  else
+    //ESCDELAY = CURSES_SET_ESCDELAY;
+//#  endif
+//# endif
+//#endif
 
-    // Don't kill Crawl if we can't set the codepage. Windows 95/98/ME
-    // don't have support for setting the input and output codepage.
-    // I'm also not convinced we need to set the input codepage at all.
-    if (InputCP != PREFERRED_CODEPAGE)
-        SetConsoleCP(PREFERRED_CODEPAGE);
+    //meta(stdscr, TRUE);
+    //unixcurses_defkeys();
+    //start_color();
 
-    if (OutputCP != PREFERRED_CODEPAGE)
-        SetConsoleOutputCP(PREFERRED_CODEPAGE);
+    //setup_colour_pairs();
+    //// Since it may swap pairs, set default colors *after* setting up all pairs.
+    //curs_set_default_colors();
+
+    //scrollok(stdscr, FALSE);
+
+    //// Must call refresh() for ncurses to update COLS and LINES.
+    //refresh();
+    //crawl_view.init_geometry();
+
+    //// TODO: how does this relate to what tiles.resize does?
+    //ui::resize(crawl_view.termsz.x, crawl_view.termsz.y);
+
+//#ifdef USE_TILE_WEB
+    //tiles.resize();
+//#endif
 }
 
 void console_shutdown()
 {
-    // don't do anything if we were never initted
-    if (inbuf == nullptr && outbuf == nullptr && old_outbuf == nullptr)
-        return;
+    //if (_headless_mode)
+        //return;
 
-    // JWM, 06/12/2004: Code page stuff. If it was the preferred code page, it
-    // doesn't need restoring. Shouldn't be an error and too bad if there is.
-    if (InputCP && InputCP != PREFERRED_CODEPAGE)
-        SetConsoleCP(InputCP);
+    //// resetty();
+    //endwin();
 
-    if (OutputCP && OutputCP != PREFERRED_CODEPAGE)
-        SetConsoleOutputCP(OutputCP);
+    //tcsetattr(0, TCSAFLUSH, &def_term);
+//#ifdef CURSES_USE_KEYPAD
+    //// "if ();" to avoid undisableable spurious warning.
+    //if (write(1, KPADCUR, strlen(KPADCUR))) {};
+//#endif
 
-    // restore console attributes for normal function
-    _set_string_input(true);
+#ifdef USE_UNIX_SIGNALS
+# ifndef KEY_RESIZE
+    //signal(SIGWINCH, SIG_DFL);
+# endif
+#endif
+}
 
-    // set cursor and normal textcolour
-    set_cursor_enabled(true);
-    textcolour(DARKGREY);
+void w32_insert_escape()
+{
+}
 
-    inbuf = nullptr;
+void cprintf(const char *format, ...)
+{
+    char buffer[2048];          // One full screen if no control seq...
 
-    delete [] screen;
-    screen = nullptr;
+    va_list argp;
 
-    // finally, restore title
-    if (*oldTitle)
-        SetConsoleTitleW(oldTitle);
+    va_start(argp, format);
+    vsnprintf(buffer, sizeof(buffer), format, argp);
+    va_end(argp);
 
-    // and switch back to the former console buffer
-    if (old_outbuf)
+    char32_t c;
+    char *bp = buffer;
+    while (int s = utf8towc(&c, bp))
     {
-        SetConsoleActiveScreenBuffer(old_outbuf);
-        CloseHandle(outbuf);
-        old_outbuf = 0;
-        outbuf = 0;
+        bp += s;
+        // headless check handled in putwch
+        putwch(c);
     }
+}
+
+void putwch(char32_t chr)
+{
+    //wchar_t c = chr;
+    //curX += c ? wcwidth(chr) : 0;
+    screenArray[curY][curX] = chr;
+    curX++;
+    if (curX >= HEADLESS_COLS)
+    {
+        curY++;
+        curX = curX - HEADLESS_COLS;
+    }
+    if (curX >= HEADLESS_COLS && curY >= HEADLESS_LINES)
+    {
+        curX = int(HEADLESS_COLS)-1;
+        curY = int(HEADLESS_LINES)-1;
+    }
+    //std::cout << curX << " " << curY << " " << char(chr) << std::endl;
+    
+    //wchar_t c = chr; // ??
+    //if (_headless_mode)
+    //{
+        //// simulate cursor movement and wrapping
+        //headless_x += c ? wcwidth(chr) : 0;
+        //if (headless_x >= HEADLESS_COLS && headless_y >= HEADLESS_LINES)
+        //{
+            //headless_x = HEADLESS_COLS;
+            //headless_y = HEADLESS_LINES;
+        //}
+        //else if (headless_x > HEADLESS_COLS)
+        //{
+            //headless_y++;
+            //headless_x = headless_x - HEADLESS_COLS;
+        //}
+    //}
+    //else
+    //{
+        //if (!c)
+            //c = ' ';
+        //// TODO: recognize unsupported characters and try to transliterate
+        //addnwstr(&c, 1);
+    //}
+
+//#ifdef USE_TILE_WEB
+    //char32_t buf[2];
+    //buf[0] = chr;
+    //buf[1] = 0;
+    //tiles.put_ucs_string(buf);
+//#endif
+}
+
+void puttext(int x1, int y1, const crawl_view_buffer &vbuf)
+{
+    const screen_cell_t *cell = vbuf;
+    const coord_def size = vbuf.size();
+    for (int y = 0; y < size.y; ++y)
+    {
+        cgotoxy(x1, y1 + y);
+        for (int x = 0; x < size.x; ++x)
+        {
+            // headless check handled in putwch, which this calls
+            put_colour_ch(cell->colour, cell->glyph);
+            cell++;
+        }
+    }
+}
+
+// These next four are front functions so that we can reduce
+// the amount of curses special code that occurs outside this
+// this file. This is good, since there are some issues with
+// name space collisions between curses macros and the standard
+// C++ string class.  -- bwr
+void update_screen()
+{
+    for (int y = 0; y < HEADLESS_LINES; ++y)
+    {
+        for (int x = 0; x < HEADLESS_COLS; ++x)
+        {
+            std::cout << char(screenArray[y][x]);
+        }
+        std::cout << std::endl;
+    }
+    
+    // In objstat, headless, and similar modes, there might not be a screen to update.
+    //if (stdscr)
+    //{
+        //// Refreshing the default colors helps keep colors synced in ttyrecs.
+        //curs_set_default_colors();
+        //refresh();
+    //}
+
+//#ifdef USE_TILE_WEB
+    //tiles.set_need_redraw();
+//#endif
+}
+
+void clear_to_end_of_line()
+{
+    for (int x = curX; x < get_number_of_cols(); ++x)
+    {
+        screenArray[curY][x] = ' ';
+    }
+    //if (!_headless_mode)
+    //{
+        //textcolour(LIGHTGREY);
+        //textbackground(BLACK);
+        //clrtoeol(); // shouldn't move cursor pos
+    //}
+
+//#ifdef USE_TILE_WEB
+    //tiles.clear_to_end_of_line();
+//#endif
+}
+
+int get_number_of_lines()
+{
+    return HEADLESS_LINES;
+    //if (_headless_mode)
+        //return HEADLESS_LINES;
+    //else
+        //return LINES;
+}
+
+int get_number_of_cols()
+{
+    return HEADLESS_COLS;
+    //if (_headless_mode)
+        //return HEADLESS_COLS;
+    //else
+        //return COLS;
+}
+
+int num_to_lines(int num)
+{
+    return num;
+}
+
+#ifdef DGAMELAUNCH
+static bool _suppress_dgl_clrscr = false;
+
+// TODO: this is not an ideal way to solve this problem. An alternative might
+// be to queue dgl clrscr and only send them at the same time as an actual
+// refresh?
+suppress_dgl_clrscr::suppress_dgl_clrscr()
+    : prev(_suppress_dgl_clrscr)
+{
+    _suppress_dgl_clrscr = true;
+}
+
+suppress_dgl_clrscr::~suppress_dgl_clrscr()
+{
+    _suppress_dgl_clrscr = prev;
+}
+#endif
+
+void clrscr_sys()
+{
+    for (int y = 0; y < HEADLESS_LINES; ++y)
+    {
+        for (int x = 0; x < HEADLESS_COLS; ++x)
+        {
+            screenArray[y][x] = ' ';
+        }
+    }
+    curX = 0;
+    curY = 0;
+
+    //if (_headless_mode)
+    //{
+        //headless_x = 1;
+        //headless_y = 1;
+        //return;
+    //}
+
+    //textcolour(LIGHTGREY);
+    //textbackground(BLACK);
+    //clear();
+//#ifdef DGAMELAUNCH
+    //if (!_suppress_dgl_clrscr)
+    //{
+        //printf("%s", DGL_CLEAR_SCREEN);
+        //fflush(stdout);
+    //}
+//#endif
+
+}
+
+void set_cursor_enabled(bool enabled)
+{
+    enabled = enabled;
+    //curs_set(cursor_is_enabled = enabled);
+//#ifdef USE_TILE_WEB
+    //tiles.set_text_cursor(enabled);
+//#endif
 }
 
 bool is_cursor_enabled()
@@ -455,165 +881,6 @@ bool is_cursor_enabled()
     return cursor_is_enabled;
 }
 
-void set_cursor_enabled(bool curstype)
-{
-    CONSOLE_CURSOR_INFO cci;
-
-    if (curstype == cursor_is_enabled)
-        return;
-
-    cci.dwSize = have_initial_cci && initial_cci.dwSize ? initial_cci.dwSize
-                                                        : 5;
-
-    cci.bVisible = curstype ? TRUE : FALSE;
-    cursor_is_enabled = curstype;
-    SetConsoleCursorInfo(outbuf, &cci);
-
-    // now, if we just changed from NOCURSOR to CURSOR,
-    // actually move screen cursor
-    if (cursor_is_enabled)
-        gotoxy_sys(cx+1, cy+1);
-}
-
-// This will force the cursor down to the next line.
-void clear_to_end_of_line()
-{
-    const int pos = wherex();
-    const int cols = get_number_of_cols();
-    if (pos <= cols)
-        cprintf("%*s", cols - pos + 1, "");
-}
-
-void clrscr_sys()
-{
-    int x,y;
-    COORD source;
-    SMALL_RECT target;
-
-    PCHAR_INFO pci = screen;
-
-    for (x = 0; x < screensize.X; x++)
-        for (y = 0; y < screensize.Y; y++)
-        {
-            pci->Char.UnicodeChar = ' ';
-            pci->Attributes = 0;
-            pci++;
-        }
-
-    source.X = 0;
-    source.Y = 0;
-    target.Left = 0;
-    target.Top = 0;
-    target.Right = screensize.X - 1;
-    target.Bottom = screensize.Y - 1;
-
-    WriteConsoleOutputW(outbuf, screen, screensize, source, &target);
-}
-
-void gotoxy_sys(int x, int y)
-{
-    // always flush on goto
-    bFlush();
-
-    // bounds check
-    if (x < 1)
-        x = 1;
-    if (x > screensize.X)
-        x = screensize.X;
-    if (y < 1)
-        y = 1;
-    if (y > screensize.Y)
-        y = screensize.Y;
-
-    // change current cursor
-    cx = x - 1;
-    cy = y - 1;
-
-    // if cursor is not NOCURSOR, update screen
-    if (cursor_is_enabled)
-    {
-        COORD xy;
-        xy.X = cx;
-        xy.Y = cy;
-        if (SetConsoleCursorPosition(outbuf, xy) == 0)
-            fputs("SetConsoleCursorPosition() failed!", stderr);
-    }
-}
-
-static unsigned short _dos_reverse_highlight(unsigned short colour)
-{
-    if (Options.dos_use_background_intensity)
-    {
-        // If the console treats the intensity bit on background colours
-        // correctly, we can do a very simple colour invert.
-
-        // Special casery for shadows.
-        if (colour == BLACK)
-            colour = (DARKGREY << 4);
-        else
-            colour = (colour & 0xF) << 4;
-    }
-    else
-    {
-        // If we're on a console that takes its DOSness very seriously the
-        // background high-intensity bit is actually a blink bit. Blinking is
-        // evil, so we strip the background high-intensity bit. This, sadly,
-        // limits us to 7 background colours.
-
-        // Strip off high-intensity bit. Special case DARKGREY, since it's the
-        // high-intensity counterpart of black, and we don't want black on
-        // black.
-        //
-        // We *could* set the foreground colour to WHITE if the background
-        // intensity bit is set, but I think we've carried the
-        // angry-fruit-salad theme far enough already.
-
-        if (colour == DARKGREY)
-            colour |= (LIGHTGREY << 4);
-        else if (colour == BLACK)
-            colour = LIGHTGREY << 4;
-        else
-        {
-            // Zap out any existing background colour, and the high
-            // intensity bit.
-            colour  &= 7;
-
-            // And swap the foreground colour over to the background
-            // colour, leaving the foreground black.
-            colour <<= 4;
-        }
-    }
-
-    return colour;
-}
-
-static unsigned short _dos_do_highlight(unsigned short colour,
-                                        unsigned short highlite)
-{
-    if (!highlite)
-        return colour;
-
-    if (colour == highlite)
-        colour = 0;
-
-    colour |= (highlite << 4);
-    return colour;
-}
-
-static unsigned short _dos_highlight(unsigned short colour, unsigned highlight)
-{
-    if ((highlight & CHATTR_ATTRMASK) == CHATTR_NORMAL)
-        return colour;
-
-    colour &= 0xFF;
-
-    if ((highlight & CHATTR_ATTRMASK) == CHATTR_HILITE)
-        return _dos_do_highlight(colour, (highlight & CHATTR_COLMASK) >> 8);
-    else
-        return _dos_reverse_highlight(colour);
-}
-
-// XX code duplication
 static inline unsigned get_highlight(int col)
 {
     return ((col & COLFLAG_UNUSUAL_MASK) == COLFLAG_UNUSUAL_MASK) ?
@@ -629,352 +896,190 @@ static inline unsigned get_highlight(int col)
                                             : unsigned{CHATTR_NORMAL};
 }
 
-static void update_text_colours(int highlight)
+// see declaration
+static bool curs_can_use_extended_colors()
 {
-    unsigned short highlighted_bg_fg = _dos_highlight(FG_COL, highlight);
-    const bool highlight_overrides_bg = highlighted_bg_fg & 0xF0;
-
-    const short fg = highlighted_bg_fg & 0x0F;
-    const short bg = highlight_overrides_bg ? (highlighted_bg_fg & 0xF0) >> 4 : BG_COL;
-
-    const short macro_fg = Options.colour[fg];
-    const short macro_bg = Options.colour[bg];
-
-    current_colour = (macro_bg << 4) | macro_fg;
+    //return Options.allow_extended_colours && COLORS >= NUM_TERM_COLOURS;
+    return false;
 }
 
-void textcolour(int c)
+lib_display_info::lib_display_info()
+    : type(CRAWL_BUILD_NAME),
+    term("curseless"),
+    fg_colors(
+        (curs_can_use_extended_colors()
+                || Options.bold_brightens_foreground != false)
+        ? 16 : 8),
+    bg_colors(
+        (curs_can_use_extended_colors() || Options.blink_brightens_background)
+        ? 16 : 8)
 {
-    FG_COL = static_cast<COLOURS>(c & 0xF);
-    update_text_colours(get_highlight(c));
 }
 
-void textbackground(int c)
+void textcolour(int col)
 {
-    BG_COL = static_cast<COLOURS>(c & 0xF);
-    update_text_colours(get_highlight(c));
+    col = 1 - col;
+    //if (!_headless_mode)
+    //{
+        //const auto style = curs_attr_fg(col);
+        //attr_set(style.attr, style.color_pair, nullptr);
+    //}
+
+//#ifdef USE_TILE_WEB
+    //tiles.textcolour(col);
+//#endif
 }
 
 COLOURS default_hover_colour()
 {
-    // Does this work with all the ancient "dos" options?
+    // DARKGREY backgrounds go to black with 8 colors. I think this is
+    // generally what we want, rather than applying a workaround (like the
+    // DARKGREY -> BLUE foreground trick), but this means that using a
+    // DARKGREY hover, which arguably looks better in 16colors, won't work.
+    // DARKGREY is also not safe under bold_brightens_foreground, since a
+    // terminal that supports this won't necessarily handle a bold background.
+
+    // n.b. if your menu uses just one color, and you set that as the hover,
+    // you will get automatic color inversion. That is generally the safest
+    // option where possible.
     return DARKGREY;
+    //return (curs_can_use_extended_colors() || Options.blink_brightens_background)
+                 //? DARKGREY : BLUE;
 }
 
-// TODO: needs testing on windows
-lib_display_info::lib_display_info()
-    : type("Windows Console"),
-    term("N/A"),
-    fg_colors(16),
-    bg_colors(Options.dos_use_background_intensity ? 7 : 8) // ?? no idea really
+void textbackground(int col)
 {
+    col = 1 - col;
+    //if (!_headless_mode)
+    //{
+        //const auto style = curs_attr_bg(col);
+        //attr_set(style.attr, style.color_pair, nullptr);
+    //}
+
+//#ifdef USE_TILE_WEB
+    //tiles.textbackground(col);
+//#endif
 }
 
-static void cprintf_aux(const char *s)
+void gotoxy_sys(int x, int y)
 {
-    // early out -- not initted yet
-    if (outbuf == nullptr)
-    {
-        printf("%ls", OUTW(s));
-        return;
-    }
+    curX = x-1;
+    curY = y-1;
 
-    // loop through string
-    char32_t c;
-    while (int taken = utf8towc(&c, s))
-    {
-        s += taken;
-        writeChar(c);
-    }
-
-    // flush string
-    bFlush();
+    //if (_headless_mode)
+    //{
+        //headless_x = x;
+        //headless_y = y;
+    //}
+    //else
+        //move(y - 1, x - 1);
 }
 
-void cprintf(const char *format, ...)
+static inline cchar_t character_at(int y, int x)
 {
-    va_list argp;
-    char buffer[4096]; // one could hope it's enough
+    return screenArray[y][x];
+    //cchar_t c;
+    //// (void) is to hush an incorrect clang warning.
+    //(void)mvin_wch(y, x, &c);
+    //return c;
+}
 
-    va_start(argp, format);
+/**
+ * @internal
+ * Writing out a cchar_t to the screen using one of the add_wch functions does
+ * not necessarily set the character attributes contained within.
+ *
+ * So, explicitly set the screen attributes to those contained within the passed
+ * cchar_t before writing it to the screen. This *should* guarantee that that
+ * all attributes within the cchar_t (and only those within the cchar_t) are
+ * actually set.
+ */
+static void write_char_at(int y, int x, const cchar_t &ch)
+{
+    curX = x;
+    curY = y;
+    screenArray[y][x] = ch;
 
-    vsnprintf(buffer, sizeof(buffer), format, argp);
-    cprintf_aux(buffer);
+    //attr_t attr = 0;
+    //short color_pair = 0;
+    //wchar_t *wch = nullptr;
 
-    va_end(argp);
+    //// Make sure to allocate enough space for the characters.
+    //int chars_to_allocate = getcchar(&ch, nullptr, &attr, &color_pair, nullptr);
+    //if (chars_to_allocate > 0)
+        //wch = new wchar_t[chars_to_allocate];
+
+    //// Good to go. Grab the color / attr info.
+    ////getcchar(&ch, wch, &attr, &color_pair, nullptr);
+
+    //// Clean up.
+    //if (chars_to_allocate > 0)
+        //delete [] wch;
+
+    //attr_set(attr, color_pair, nullptr);
+    //mvadd_wchnstr(y, x, &ch, 1);
+}
+
+void fakecursorxy(int x, int y)
+{
+    //if (_headless_mode)
+    //{
+        //gotoxy_sys(x, y);
+        //set_cursor_region(GOTO_CRT);
+        //return;
+    //}
+
+    int x_curses = x - 1;
+    int y_curses = y - 1;
+
+    cchar_t c = character_at(y_curses, x_curses);
+    //flip_colour(c);
+    write_char_at(y_curses, x_curses, c);
+    //// the above still results in changes to the return values for wherex and
+    //// wherey, so set the cursor region to ensure that the cursor position is
+    //// valid after this call. (This also matches the behavior of real cursorxy.)
+    set_cursor_region(GOTO_CRT);
 }
 
 int wherex()
 {
-    return cx+1;
+    return curX+1;
+    //if (_headless_mode)
+        //return headless_x;
+    //else
+        //return getcurx(stdscr) + 1;
 }
 
 int wherey()
 {
-    return cy+1;
+    return curY+1;
+    //if (_headless_mode)
+        //return headless_y;
+    //else
+        //return getcury(stdscr) + 1;
 }
 
-void putwch(char32_t c)
-{
-    if (c == 0)
-        c = ' ';
-    writeChar(c);
-}
-
-// translate virtual keys
-
-#define VKEY_MAPPINGS 11
-static int vk_tr[4][VKEY_MAPPINGS] = // virtual key, unmodified, shifted, control
-{
-    { VK_END, VK_DOWN, VK_NEXT, VK_LEFT, VK_CLEAR, VK_RIGHT,
-      VK_HOME, VK_UP, VK_PRIOR, VK_INSERT, VK_TAB },
-    { CK_END, CK_DOWN, CK_PGDN, CK_LEFT, CK_CLEAR, CK_RIGHT,
-      CK_HOME, CK_UP, CK_PGUP , CK_INSERT, CONTROL('I') },
-    { CK_SHIFT_END, CK_SHIFT_DOWN, CK_SHIFT_PGDN, CK_SHIFT_LEFT, CK_SHIFT_CLEAR, CK_SHIFT_RIGHT,
-      CK_SHIFT_HOME, CK_SHIFT_UP, CK_SHIFT_PGUP, CK_SHIFT_INSERT, CK_SHIFT_TAB },
-    { CK_CTRL_END, CK_CTRL_DOWN, CK_CTRL_PGDN, CK_CTRL_LEFT, CK_CTRL_CLEAR, CK_CTRL_RIGHT,
-      CK_CTRL_HOME, CK_CTRL_UP, CK_CTRL_PGUP, CK_CTRL_INSERT, CK_CTRL_TAB },
-};
-
-static int vk_translate(WORD VirtCode, WCHAR c, DWORD cKeys)
-{
-    bool shftDown = false;
-    bool ctrlDown = false;
-    bool altDown  = !!(cKeys & (LEFT_ALT_PRESSED | RIGHT_ALT_PRESSED));
-
-    // step 1 - we don't care about shift or control
-    if (VirtCode == VK_SHIFT || VirtCode == VK_CONTROL
-        || VirtCode == VK_MENU || VirtCode == VK_CAPITAL
-        || VirtCode == VK_NUMLOCK)
-    {
-        return 0;
-    }
-
-    // step 2 - translate the <Esc> key to 0x1b
-    if (VirtCode == VK_ESCAPE)
-        return 0x1b;            // same as it ever was..
-
-    // step 3 - translate shifted or controlled numeric keypad keys
-    if (cKeys & SHIFT_PRESSED)
-        shftDown = true;
-    if (cKeys & (RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED))
-        ctrlDown = true;           // control takes precedence over shift
-
-    // hack - translate ^P and ^Q since 16 and 17 are taken by CTRL and SHIFT
-    if ((VirtCode == 80 || VirtCode == 81) && ctrlDown)
-        return VirtCode & 0x003f;     // shift back down
-
-    if (VirtCode == VK_DELETE && !ctrlDown)         // assume keypad '.'
-        return CK_DELETE;
-
-    // see if we're a vkey
-    int mkey;
-    for (mkey = 0; mkey<VKEY_MAPPINGS; mkey++)
-        if (VirtCode == vk_tr[0][mkey])
-            break;
-
-    // step 4 - just return the damn key.
-    if (mkey == VKEY_MAPPINGS)
-    {
-        if (c)
-            return c;
-
-        // ds -- Icky hacks to allow keymaps with funky keys.
-        if (ctrlDown)
-            VirtCode |= 512;
-        if (shftDown)
-            VirtCode |= 1024;
-        if (altDown)
-            VirtCode |= 2048;
-
-        // ds -- Cheat and returns 256 + VK if the char is zero. This allows us
-        // to use the VK for macros and is on par for evil with the rest of
-        // this function anyway.
-        return VirtCode | 256;
-    }
-
-    // now translate the key. Dammit. This is !@#$(*& garbage.
-
-    // control key?
-    if (ctrlDown)
-        return vk_tr[3][mkey];
-
-    // shifted?
-    if (shftDown)
-        return vk_tr[2][mkey];
-    return vk_tr[1][mkey];
-}
-
-static int w32_proc_mouse_event(const MOUSE_EVENT_RECORD &mer)
-{
-    const coord_def pos(mer.dwMousePosition.X + 1, mer.dwMousePosition.Y + 1);
-    crawl_view.mousep = pos;
-
-    if (!crawl_state.mouse_enabled)
-        return 0;
-
-    c_mouse_event cme(pos);
-    if (mer.dwEventFlags & MOUSE_MOVED)
-        return CK_MOUSE_MOVE;
-
-    if (mer.dwButtonState & FROM_LEFT_1ST_BUTTON_PRESSED)
-        cme.bstate |= c_mouse_event::BUTTON1;
-    else if (mer.dwButtonState & RIGHTMOST_BUTTON_PRESSED)
-        cme.bstate |= c_mouse_event::BUTTON3;
-
-    if ((mer.dwEventFlags & MOUSE_WHEELED) && mer.dwButtonState)
-    {
-        if (!(mer.dwButtonState & 0x10000000UL))
-            cme.bstate |= c_mouse_event::BUTTON_SCRL_UP;
-        else
-            cme.bstate |= c_mouse_event::BUTTON_SCRL_DN;
-    }
-
-    if (cme)
-    {
-        new_mouse_event(cme);
-        return CK_MOUSE_CLICK;
-    }
-
-    return 0;
-}
-
-
-void set_getch_returns_resizes(bool rr)
-{
-    UNUSED(rr);
-    // no-op on windows console: see mantis issue #11532
-}
-
-int getch_ck()
-{
-    INPUT_RECORD ir;
-    DWORD nread;
-    int key = 0;
-    static int repeat_count = 0;
-    static int repeat_key = 0;
-
-    KEY_EVENT_RECORD *kr;
-
-    // handle key repeats
-    if (repeat_count > 0)
-    {
-        repeat_count -= 1;
-        return repeat_key;
-    }
-
-    bool waiting_for_event = true;
-    while (waiting_for_event)
-    {
-        if (crawl_state.seen_hups)
-            return ESCAPE;
-
-        if (ReadConsoleInputW(inbuf, &ir, 1, &nread) == 0)
-            fputs("Error in ReadConsoleInputW()!", stderr);
-        if (nread > 0)
-        {
-            // ignore if it isn't a keyboard event.
-            switch (ir.EventType)
-            {
-            case KEY_EVENT:
-                kr = &ir.Event.KeyEvent;
-                // ignore if it is a 'key up' - we only want 'key down'
-                if (kr->bKeyDown)
-                {
-                    key = vk_translate(kr->wVirtualKeyCode,
-                                       kr->uChar.UnicodeChar,
-                                       kr->dwControlKeyState);
-                    if (key != 0)
-                    {
-                        repeat_count = kr->wRepeatCount - 1;
-                        repeat_key = key;
-                        waiting_for_event = false;
-                        break;
-                    }
-                }
-                break;
-
-            case WINDOW_BUFFER_SIZE_EVENT:
-                w32_handle_resize_event();
-                break;
-
-            case MOUSE_EVENT:
-                if ((key = w32_proc_mouse_event(ir.Event.MouseEvent)))
-                    waiting_for_event = false;
-                break;
-            }
-        }
-    }
-
-    return key;
-}
-
-bool kbhit()
-{
-    if (crawl_state.seen_hups)
-        return 1;
-
-    INPUT_RECORD ir[10];
-    DWORD read_count = 0;
-    PeekConsoleInputW(inbuf, ir, ARRAYSZ(ir), &read_count);
-    if (read_count > 0)
-    {
-        for (unsigned i = 0; i < read_count; ++i)
-            if (ir[i].EventType == KEY_EVENT)
-            {
-                KEY_EVENT_RECORD *kr;
-                kr = &(ir[i].Event.KeyEvent);
-
-                if (kr->bKeyDown)
-                    return 1;
-            }
-    }
-    return 0;
-}
-
-void delay(unsigned int ms)
+void delay(unsigned int time)
 {
     if (crawl_state.disables[DIS_DELAY])
         return;
 
-    Sleep((DWORD)ms);
-}
-
-void puttext(int x1, int y1, const crawl_view_buffer &vbuf)
-{
-    const screen_cell_t *cell = vbuf;
-    const coord_def size = vbuf.size();
-    for (int y = 0; y < size.y; ++y)
+#ifdef USE_TILE_WEB
+    tiles.redraw();
+    if (time)
     {
-        cgotoxy(x1, y1 + y);
-        for (int x = 0; x < size.x; ++x)
-        {
-            textcolour(cell->colour);
-            putwch(cell->glyph);
-            cell++;
-        }
+        tiles.send_message("{\"msg\":\"delay\",\"t\":%d}", time);
+        tiles.flush_messages();
     }
-    textcolour(WHITE);
+#endif
+
+    //refresh();
+    if (time)
+        usleep(time * 1000);
 }
 
-void update_screen()
+/* This is Juho Snellman's modified kbhit, to work with macros */
+bool kbhit()
 {
-    bFlush();
+    return false;
 }
-
-int get_number_of_lines()
-{
-    return screensize.Y;
-}
-
-int get_number_of_cols()
-{
-    return screensize.X;
-}
-
-int num_to_lines(int num)
-{
-    return num;
-}
-
-#endif /* #if defined(TARGET_OS_WINDOWS) && !defined(USE_TILE_LOCAL) */
