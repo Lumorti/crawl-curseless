@@ -754,6 +754,7 @@ void puttext(int x1, int y1, const crawl_view_buffer &vbuf)
 // C++ string class.  -- bwr
 void update_screen()
 {
+    std::cout << "===START===" << std::endl;
     for (int y = 0; y < HEADLESS_LINES; ++y)
     {
         for (int x = 0; x < HEADLESS_COLS; ++x)
@@ -762,6 +763,7 @@ void update_screen()
         }
         std::cout << std::endl;
     }
+    std::cout << "===END===" << std::endl;
     
     // In objstat, headless, and similar modes, there might not be a screen to update.
     //if (stdscr)
