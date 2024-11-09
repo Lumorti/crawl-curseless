@@ -273,6 +273,8 @@ static int _get_key_from_curses()
         return CK_DELETE;
     } else if (str == "escape") {
         return ESCAPE;
+    } else if (str == "tab") {
+        return CK_TAB;
     } else if (str == "enter") {
         return CK_ENTER;
     } else if (str == "exit") {
