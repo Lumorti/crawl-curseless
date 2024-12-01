@@ -59,6 +59,7 @@
 // TODO1
 #define cchar_t char32_t
 std::vector<std::vector<cchar_t>> screenArray;
+std::vector<std::vector<cchar_t>> prevScreenArray;
 int curX = 0;
 int curY = 0;
 
@@ -275,6 +276,8 @@ static int _get_key_from_curses()
         return ESCAPE;
     } else if (str == "tab") {
         return CK_TAB;
+    } else if (str == "ctrl-X") {
+        return CONTROL('X');
     } else if (str == "enter") {
         return CK_ENTER;
     } else if (str == "exit") {
@@ -756,16 +759,22 @@ void puttext(int x1, int y1, const crawl_view_buffer &vbuf)
 // C++ string class.  -- bwr
 void update_screen()
 {
-    std::cout << "===START===" << std::endl;
-    for (int y = 0; y < HEADLESS_LINES; ++y)
-    {
-        for (int x = 0; x < HEADLESS_COLS; ++x)
+    if (screenArray != prevScreenArray) {
+        std::cout << "===START===" << std::endl;
+        for (int y = 0; y < HEADLESS_LINES; ++y)
         {
-            std::cout << char(screenArray[y][x]);
+            for (int x = 0; x < HEADLESS_COLS; ++x)
+            {
+                std::cout << char(screenArray[y][x]);
+            }
+            std::cout << std::endl;
         }
-        std::cout << std::endl;
+        std::cout << "===END===" << std::endl;
+        prevScreenArray = screenArray;
+    } else {
+        std::cout << "===START===" << std::endl;
+        std::cout << "===END===" << std::endl;
     }
-    std::cout << "===END===" << std::endl;
     
     // In objstat, headless, and similar modes, there might not be a screen to update.
     //if (stdscr)
