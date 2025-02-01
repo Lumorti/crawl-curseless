@@ -235,6 +235,7 @@ static int _get_key_from_curses()
 
     //return -c;
 
+    std::cout << "===READY===" << std::endl;
     std::string str;
     std::getline(std::cin, str);
     //switch (str)

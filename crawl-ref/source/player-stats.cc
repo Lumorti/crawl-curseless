@@ -121,6 +121,10 @@ bool attribute_increase()
         : "Increase (s)trength, (i)ntelligence, or (d)exterity? ");
     mouse_control mc(MOUSE_MODE_PROMPT);
 
+    // Force update the screen
+    redraw_screen();
+    update_screen();
+
     bool tried_lua = false;
     int keyin;
     while (true)
