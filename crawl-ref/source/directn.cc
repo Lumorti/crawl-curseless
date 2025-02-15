@@ -922,7 +922,7 @@ static void _get_nearby_features(vector<coord_def> &list_features,
             {
                 for (const text_pattern &pattern : filters)
                 {
-                    if (pattern.matches(feature_description(env.grid(*ri)))
+                    if (pattern.matches(feature_description_at(*ri))
                         || feat_stair_direction(env.grid(*ri)) != CMD_NO_CMD
                            && pattern.matches("stair")
                         || feat_is_trap(env.grid(*ri))
@@ -3443,6 +3443,12 @@ string feature_description_at(const coord_def& where, bool covering,
 
         if (is_bloodcovered(where))
             covering_description += ", spattered with blood";
+    }
+
+    // if covered with a cloud
+    if (cloud_struct* cloud = cloud_at(where))
+    {
+        covering_description += " (clouded in " + cloud->cloud_name(true) + ")";
     }
 
     // FIXME: remove desc markers completely; only Zin walls are left.
