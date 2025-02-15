@@ -1901,11 +1901,12 @@ void get_monster_info(vector<monster_info>& mons)
 
     for (monster *mon : visible)
     {
-        if (mons_is_threatening(*mon)
-            || mon->is_child_tentacle())
-        {
-            mons.emplace_back(mon);
-        }
+        mons.emplace_back(mon);
+        //if (mons_is_threatening(*mon)
+            //|| mon->is_child_tentacle())
+        //{
+            //mons.emplace_back(mon);
+        //}
     }
     sort(mons.begin(), mons.end(), monster_info::less_than_wrapper);
 }
