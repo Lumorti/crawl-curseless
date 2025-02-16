@@ -1284,29 +1284,29 @@ void ouch(int dam, kill_method_type death_type, mid_t source, const char *aux,
     scorefile_entry se(dam, source, death_type, aux, false,
                        death_source_name);
 
-#ifdef WIZARD
-    if (!non_death)
-    {
-        if (crawl_state.test || you.wizard || you.suppress_wizard || (you.explore && !you.lives))
-        {
-            const string death_desc
-                = se.death_description(scorefile_entry::DDV_VERBOSE);
+//#ifdef WIZARD
+    //if (!non_death)
+    //{
+        //if (crawl_state.test || you.wizard || you.suppress_wizard || (you.explore && !you.lives))
+        //{
+            //const string death_desc
+                //= se.death_description(scorefile_entry::DDV_VERBOSE);
 
-            dprf("Damage: %d; Hit points: %d", dam, you.hp);
+            //dprf("Damage: %d; Hit points: %d", dam, you.hp);
 
-            if (crawl_state.test || !yesno("Die?", false, 'n'))
-            {
-                mpr("Thought so.");
-                take_note(Note(NOTE_DEATH, you.hp, you.hp_max,
-                                death_desc.c_str()), true);
-                _wizard_restore_life();
-                take_note(Note(NOTE_DEATH, you.hp, you.hp_max,
-                                "You cheat death using unusual wizardly powers."), true);
-                return;
-            }
-        }
-    }
-#endif  // WIZARD
+            //if (crawl_state.test || !yesno("Die?", false, 'n'))
+            //{
+                //mpr("Thought so.");
+                //take_note(Note(NOTE_DEATH, you.hp, you.hp_max,
+                                //death_desc.c_str()), true);
+                //_wizard_restore_life();
+                //take_note(Note(NOTE_DEATH, you.hp, you.hp_max,
+                                //"You cheat death using unusual wizardly powers."), true);
+                //return;
+            //}
+        //}
+    //}
+//#endif  // WIZARD
 
     if (crawl_state.game_is_tutorial())
     {
