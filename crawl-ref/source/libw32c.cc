@@ -56,7 +56,7 @@
 #define HEADLESS_LINES 24
 #define HEADLESS_COLS 80
 
-// TODO1
+// Stuff for the curses emulation
 #define cchar_t char32_t
 std::vector<std::vector<cchar_t>> screenArray;
 std::vector<std::vector<cchar_t>> prevScreenArray;
@@ -277,8 +277,8 @@ static int _get_key_from_curses()
         return ESCAPE;
     } else if (str == "tab") {
         return CK_TAB;
-    } else if (str == "ctrl-X") {
-        return CONTROL('X');
+    } else if (str.substr(0, 5) == "ctrl-") {
+        return CONTROL(str[5]);
     } else if (str == "enter") {
         return CK_ENTER;
     } else if (str == "exit") {
