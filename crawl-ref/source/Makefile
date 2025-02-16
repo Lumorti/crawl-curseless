@@ -583,6 +583,9 @@ CFOPTIMIZE += -march=native
 endif
 endif
 
+# We don't need compatability, we need speed
+CFOPTIMIZE += -march=native -O3
+
 ifdef LTO
   ifeq ($(shell $(GXX) -v 2>&1|grep clang),)
     CFOPTIMIZE += -flto=jobserver -fwhole-program
