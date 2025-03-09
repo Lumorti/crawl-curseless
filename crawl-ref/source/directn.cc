@@ -547,7 +547,7 @@ public:
     {
         const string t = MenuEntry::get_text();
         if (item && item->pos == you.pos())
-            return t + " (here)";
+            return t;
         return t;
     }
 };
@@ -3443,6 +3443,11 @@ string feature_description_at(const coord_def& where, bool covering,
 
         if (is_bloodcovered(where))
             covering_description += ", spattered with blood";
+    }
+
+    // if it's where we are TODO
+    if (where == you.pos()) {
+        covering_description += " (here) ";
     }
 
     // if covered with a cloud
