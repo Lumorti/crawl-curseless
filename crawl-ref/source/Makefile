@@ -365,10 +365,6 @@ BUILD_LIBPNG = YesPlease # used by build-rltiles sub-make
 endif
 endif
 
-ifdef ANDROID
-TILES_ANY = YesPlease
-endif
-
 #
 # Check for an Apple-released compiler.
 #
@@ -584,7 +580,7 @@ endif
 endif
 
 # We don't need compatability, we need speed
-CFOPTIMIZE += -march=native -O3
+CFOPTIMIZE += -O2
 
 ifdef LTO
   ifeq ($(shell $(GXX) -v 2>&1|grep clang),)
@@ -653,8 +649,6 @@ ifdef ANDROID
   COPY_FONTS = yes
   NO_PKGCONFIG=Y
   GLES=Y
-  TILES=Y
-  SOUND=Y
   SAVEDIR=
 else
 
@@ -1903,7 +1897,7 @@ macro.o: cmd-name.h
 build-rltiles: .contrib-libs $(RLTILES)/dc-unrand.txt
 ifdef ANDROID
         # force submake to run properly
-	+$(MAKE) -C $(RLTILES) all ANDROID=$(ANDROID) TILES=1 V=1
+	+$(MAKE) -C $(RLTILES) all ANDROID=$(ANDROID) TILES=$(TILES) V=1
         # prove that tiles were generated properly
 	grep tile_info rltiles/*.cc| head
 else
