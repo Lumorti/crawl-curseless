@@ -242,6 +242,7 @@ endif
 ifneq (,$(findstring MSYS,$(uname_S)))
 	msys = Yes
 endif
+NO_NCURSES = YesPlease
 ifdef msys
 	GAME = crawl.exe
 	bin_prefix = .
@@ -1064,12 +1065,12 @@ endif
 # Your ncurses library may include Unicode support, and you may not have a
 # separate libncursesw; this is the case on Mac OS/Darwin.
 ifdef LIBNCURSES_IS_UNICODE
-  NCURSESLIB = ncurses
+  NCURSESLIB = 
 else
-  NCURSESLIB = ncursesw
+  NCURSESLIB = 
 endif
 
-NC_LIBS := -L$(NC_PREFIX)/lib -l$(NCURSESLIB)
+NC_LIBS := -L$(NC_PREFIX)/lib 
 NC_CFLAGS := -isystem $(NC_PREFIX)/include/$(NCURSESLIB)
 
 ifndef NO_PKGCONFIG
@@ -1234,7 +1235,7 @@ EXTRA_OBJECTS += version.o
 
 ifdef CONTRIBS
 INCLUDES_L += -isystem contrib/install/$(ARCH)/include
-LIBS += -Lcontrib/install/$(ARCH)/lib
+LIBS +=  -Lcontrib/install/$(ARCH)/lib
 endif
 
 ifdef APPLE_PLATFORM
