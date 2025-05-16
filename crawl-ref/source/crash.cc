@@ -43,6 +43,7 @@
 
 #if !defined(TARGET_OS_MACOSX) && \
     !defined(TARGET_OS_WINDOWS) && \
+    !defined(QUEST) && \
     !defined(TARGET_COMPILER_CYGWIN)
 #include <execinfo.h>
 #endif
@@ -90,6 +91,8 @@ template <typename TO, typename FROM> TO nasty_cast(FROM f)
 #include "syscalls.h"
 #include "threads.h"
 #include "tiles-build-specific.h"
+
+#undef USE_UNIX_SIGNALS
 
 /////////////////////////////////////////////////////////////////////////////
 // Code for printing out debugging info on a crash.
@@ -275,6 +278,7 @@ void init_crash_handler()
 
 string crash_signal_info()
 {
+#ifndef QUEST
 #if defined(UNIX)
     #ifdef TARGET_OS_FREEBSD
         // FreeBSD's strsignal was not working properly so we just check
@@ -294,10 +298,11 @@ string crash_signal_info()
 #else
     return "";
 #endif
+#endif
 
 }
 
-#if defined(BACKTRACE_SUPPORTED)
+#if defined(BACKTRACE_SUPPORTED) && !defined(QUEST)
 void write_stack_trace(FILE* file)
 {
     void* frames[50];
@@ -394,6 +399,7 @@ void write_stack_trace(FILE* file)
 
 void call_gdb(FILE *file)
 {
+#ifndef QUEST
 #ifndef TARGET_OS_WINDOWS
     if (crawl_state.no_gdb)
         return (void)fprintf(file, "%s\n", crawl_state.no_gdb);
@@ -440,6 +446,7 @@ void call_gdb(FILE *file)
 #else
     UNUSED(file);
 #endif
+#endif
 }
 
 void disable_other_crashes()
@@ -454,6 +461,7 @@ void disable_other_crashes()
 
 void watchdog()
 {
+#ifndef QUEST
 #ifdef UNIX
     struct itimerval t;
     t.it_interval.tv_sec = 0;
@@ -466,5 +474,6 @@ void watchdog()
     // This will break DGL, but it makes no sense on Windows anyway.
     // Mapstat is cool with this.
     alarm(60);
+#endif
 #endif
 }

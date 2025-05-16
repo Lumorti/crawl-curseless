@@ -129,7 +129,8 @@ include Makefile.obj
 #
 
 # Which C++ standard to support
-STDFLAG = -std=c++11
+#STDFLAG = -std=c++11
+STDFLAG =
 
 CFOTHERS := -pipe $(EXTERNAL_FLAGS)
 # Build with FORCE_SSE=y to get better seed stability on 32 bit x86 builds. It
@@ -205,9 +206,17 @@ export uname_S
 #
 uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo not')
 uname_M := $(shell sh -c 'uname -m 2>/dev/null || echo not')
-
 HOST := $(shell sh -c 'cc -dumpmachine || echo unknown')
 ARCH := $(HOST)
+
+# TODO
+# notes on files changed: cio.cc crash.cc files.cc 
+ifdef QUEST
+    CROSSHOST=arm-none-eabi
+    V=1
+    DEFINES_L += -DQUEST=1
+endif
+
 
 ifdef CROSSHOST
 	# XX is there a way of integrating this with mac cross-compiling?
@@ -267,6 +276,10 @@ ifdef msys
 		EXTRA_LIBS += -static -static-libgcc -static-libstdc++
 	endif
 endif
+ifdef QUEST
+    SOUND = 
+endif
+
 ifeq ($(uname_S),Darwin)
 ifdef MAC_TARGET
 	# for reasons I really cannot figure out, setting GAME later (when the
@@ -699,6 +712,7 @@ ifndef BUILD_LUA
   CFLAGS_L  += $(shell $(PKGCONFIG) $(LUA_PACKAGE) --cflags-only-other)
   LIBS += $(shell $(PKGCONFIG) $(LUA_PACKAGE) --libs)
 endif
+
 
 ifdef USE_LUAJIT
 DEFINES_L += -DUSE_LUAJIT
