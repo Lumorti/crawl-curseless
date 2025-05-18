@@ -212,7 +212,7 @@ ARCH := $(HOST)
 # TODO
 # notes on files changed: cio.cc crash.cc files.cc 
 ifdef QUEST
-    CROSSHOST=arm-none-eabi
+    CROSSHOST=arm-linux-gnueabi
     V=1
     DEFINES_L += -DQUEST=1
 endif

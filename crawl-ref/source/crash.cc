@@ -92,7 +92,9 @@ template <typename TO, typename FROM> TO nasty_cast(FROM f)
 #include "threads.h"
 #include "tiles-build-specific.h"
 
+#ifdef QUEST    
 #undef USE_UNIX_SIGNALS
+#endif
 
 /////////////////////////////////////////////////////////////////////////////
 // Code for printing out debugging info on a crash.

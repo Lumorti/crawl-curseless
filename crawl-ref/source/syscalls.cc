@@ -16,17 +16,11 @@
 # include <wincrypt.h>
 # include <io.h>
 #else
-#ifndef QUEST
 # include <dirent.h>
-#endif
 # include <unistd.h>
 # include <fcntl.h>
 # include <sys/types.h>
 # include <sys/stat.h>
-#endif
-
-#ifdef QUEST
-#define HAVE_STAT
 #endif
 
 #include "files.h"

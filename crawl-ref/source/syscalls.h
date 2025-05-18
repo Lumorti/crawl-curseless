@@ -27,10 +27,8 @@ int mkstemp(char *dummy);
 bool jni_keyboard_control(bool toggle);
 #endif
 
-#ifndef QUEST
 #ifndef CRAWL_HAVE_FDATASYNC
 int fdatasync(int fd);
-#endif
 #endif
 
 #ifdef NEED_USLEEP
