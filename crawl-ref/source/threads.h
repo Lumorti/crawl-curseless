@@ -1,7 +1,5 @@
 #pragma once
 
-#ifdef THINGTHATDOESNTEXIST
-
 #ifndef TARGET_OS_WINDOWS
 
 #include <pthread.h>
@@ -98,7 +96,5 @@ static inline int win32_thread_create_detached(thread_t *th,
 #define cond_destroy(x) CloseHandle(x);
 #define cond_wait(x,m) {mutex_unlock(m);WaitForSingleObject(x, INFINITE);mutex_lock(m);}
 #define cond_wake(x) PulseEvent(x)
-
-#endif
 
 #endif

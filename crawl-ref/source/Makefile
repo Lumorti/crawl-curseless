@@ -129,8 +129,7 @@ include Makefile.obj
 #
 
 # Which C++ standard to support
-#STDFLAG = -std=c++11
-STDFLAG =
+STDFLAG = -std=c++11
 
 CFOTHERS := -pipe $(EXTERNAL_FLAGS)
 # Build with FORCE_SSE=y to get better seed stability on 32 bit x86 builds. It
@@ -206,17 +205,9 @@ export uname_S
 #
 uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo not')
 uname_M := $(shell sh -c 'uname -m 2>/dev/null || echo not')
+
 HOST := $(shell sh -c 'cc -dumpmachine || echo unknown')
 ARCH := $(HOST)
-
-# TODO
-# notes on files changed: cio.cc crash.cc files.cc 
-ifdef QUEST
-    CROSSHOST=arm-linux-gnueabi
-    V=1
-    DEFINES_L += -DQUEST=1
-endif
-
 
 ifdef CROSSHOST
 	# XX is there a way of integrating this with mac cross-compiling?
@@ -251,7 +242,6 @@ endif
 ifneq (,$(findstring MSYS,$(uname_S)))
 	msys = Yes
 endif
-NO_NCURSES = YesPlease
 ifdef msys
 	GAME = crawl.exe
 	bin_prefix = .
@@ -276,10 +266,6 @@ ifdef msys
 		EXTRA_LIBS += -static -static-libgcc -static-libstdc++
 	endif
 endif
-ifdef QUEST
-    SOUND = 
-endif
-
 ifeq ($(uname_S),Darwin)
 ifdef MAC_TARGET
 	# for reasons I really cannot figure out, setting GAME later (when the
@@ -377,6 +363,10 @@ OBJECTS += $(TILES_OBJECTS) $(WEBTILES_OBJECTS)
 ifdef NO_PKGCONFIG
 BUILD_LIBPNG = YesPlease # used by build-rltiles sub-make
 endif
+endif
+
+ifdef ANDROID
+TILES_ANY = YesPlease
 endif
 
 #
@@ -594,7 +584,7 @@ endif
 endif
 
 # We don't need compatability, we need speed
-CFOPTIMIZE += -O2
+CFOPTIMIZE += -march=native -O3
 
 ifdef LTO
   ifeq ($(shell $(GXX) -v 2>&1|grep clang),)
@@ -663,6 +653,8 @@ ifdef ANDROID
   COPY_FONTS = yes
   NO_PKGCONFIG=Y
   GLES=Y
+  TILES=Y
+  SOUND=Y
   SAVEDIR=
 else
 
@@ -712,7 +704,6 @@ ifndef BUILD_LUA
   CFLAGS_L  += $(shell $(PKGCONFIG) $(LUA_PACKAGE) --cflags-only-other)
   LIBS += $(shell $(PKGCONFIG) $(LUA_PACKAGE) --libs)
 endif
-
 
 ifdef USE_LUAJIT
 DEFINES_L += -DUSE_LUAJIT
@@ -1079,12 +1070,12 @@ endif
 # Your ncurses library may include Unicode support, and you may not have a
 # separate libncursesw; this is the case on Mac OS/Darwin.
 ifdef LIBNCURSES_IS_UNICODE
-  NCURSESLIB = 
+  NCURSESLIB = ncurses
 else
-  NCURSESLIB = 
+  NCURSESLIB = ncursesw
 endif
 
-NC_LIBS := -L$(NC_PREFIX)/lib 
+NC_LIBS := -L$(NC_PREFIX)/lib -l$(NCURSESLIB)
 NC_CFLAGS := -isystem $(NC_PREFIX)/include/$(NCURSESLIB)
 
 ifndef NO_PKGCONFIG
@@ -1249,7 +1240,7 @@ EXTRA_OBJECTS += version.o
 
 ifdef CONTRIBS
 INCLUDES_L += -isystem contrib/install/$(ARCH)/include
-LIBS +=  -Lcontrib/install/$(ARCH)/lib
+LIBS += -Lcontrib/install/$(ARCH)/lib
 endif
 
 ifdef APPLE_PLATFORM
@@ -1912,7 +1903,7 @@ macro.o: cmd-name.h
 build-rltiles: .contrib-libs $(RLTILES)/dc-unrand.txt
 ifdef ANDROID
         # force submake to run properly
-	+$(MAKE) -C $(RLTILES) all ANDROID=$(ANDROID) TILES=$(TILES) V=1
+	+$(MAKE) -C $(RLTILES) all ANDROID=$(ANDROID) TILES=1 V=1
         # prove that tiles were generated properly
 	grep tile_info rltiles/*.cc| head
 else

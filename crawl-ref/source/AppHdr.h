@@ -54,7 +54,7 @@ static inline double pow(int x, double y) { return std::pow((double)x, y); }
 #if defined(TARGET_OS_MACOSX) || defined(TARGET_OS_LINUX) || \
     defined(TARGET_OS_FREEBSD) || defined(TARGET_OS_NETBSD) || \
     defined(TARGET_OS_OPENBSD) || defined(TARGET_OS_CYGWIN) || \
-    defined(TARGET_OS_SOLARIS) || defined(TARGET_OS_UNKNOWN) || defined(QUEST)
+    defined(TARGET_OS_SOLARIS) || defined(TARGET_OS_UNKNOWN)
     #ifndef UNIX
     #define UNIX
     #endif
@@ -73,24 +73,7 @@ static inline double pow(int x, double y) { return std::pow((double)x, y); }
 //  System Defines
 // =========================================================================
 
-#if defined(TARGET_OS_WINDOWS)
-    #if defined(TARGET_COMPILER_MINGW)
-        #define USE_UNIX_SIGNALS
-    #endif
-
-    // TODO: libw32c.h still contains an #ifdef USE_TILE_WEB
-    #include "libw32c.h"
-
-    // NT and better are happy with /; I'm not sure how 9x reacts.
-    #define FILE_SEPARATOR '/'
-    #define ALT_FILE_SEPARATOR '\\'
-
-    // Use Perl-compatible regular expressions. libpcre must be available and
-    // linked in. Required in the absence of POSIX regexes.
-    #ifndef REGEX_PCRE
-    #define REGEX_PCRE
-    #endif
-#else
+#ifdef UNIX
     // Uncomment if you're running Crawl with dgamelaunch and have
     // problems viewing games in progress. This affects how Crawl
     // clears the screen (see DGL_CLEAR_SCREEN) below.
@@ -124,6 +107,25 @@ static inline double pow(int x, double y) { return std::pow((double)x, y); }
 
     #include "libunix.h"
 
+#elif defined(TARGET_OS_WINDOWS)
+    #if defined(TARGET_COMPILER_MINGW)
+        #define USE_UNIX_SIGNALS
+    #endif
+
+    // TODO: libw32c.h still contains an #ifdef USE_TILE_WEB
+    #include "libw32c.h"
+
+    // NT and better are happy with /; I'm not sure how 9x reacts.
+    #define FILE_SEPARATOR '/'
+    #define ALT_FILE_SEPARATOR '\\'
+
+    // Use Perl-compatible regular expressions. libpcre must be available and
+    // linked in. Required in the absence of POSIX regexes.
+    #ifndef REGEX_PCRE
+    #define REGEX_PCRE
+    #endif
+#else
+    #error Missing platform #define or unsupported compiler.
 #endif
 
 #ifndef _WIN32_WINNT

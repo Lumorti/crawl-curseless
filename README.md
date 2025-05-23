@@ -7,3 +7,7 @@ Full changelist:
  - check to revive in wizard mode removed
  - we refresh the screen more often (e.g. after level up)
  - we optimize with -O3 and -march=native 
+
+Also, this also includes a http server version, so that it can be played on Quest 2/3 with the game running on a seperate device. Note that the server is just acting a local http server sending the terminal output of crawl-curseless and recieving the player's inputs.
+
+The server uses [this](https://github.com/yhirose/cpp-httplib) library, licensed under MIT.

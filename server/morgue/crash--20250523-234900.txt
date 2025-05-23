@@ -1,0 +1,132 @@
+ASSERT(fp) in 'command.cc' at line 1357 failed. (Failed to open 'crawl_manual.txt'!)
+
+Version: Dungeon Crawl Stone Soup 0.33-a0-264-gded50e90a5
+Platform: Windows
+Bits: 64
+Game mode: normal
+Tiles: no
+
+Seed: 0, deterministic pregen: 1
+Command line: ./crawl.exe
+
+RC options:
+restart_after_game = maybe
+
+
+Unable to get stack trace on this platform.
+Unable to get stack trace on this platform.
+
+
+Compilation info:
+<<<<<<<<<<<
+Compiled with GCC 14.2.0
+Build platform: x86_64-w64-mingw32
+Platform: x86_64-w64-mingw32
+CFLAGS: -O0 -march=native -O3 -pipe -DWINMM_PLAY_SOUNDS -D__USE_MINGW_ANSI_STDIO -DUSE_SOUND -Wall -Wformat-security -Wundef -Wextra -Wno-missing-field-initializers -Wno-implicit-fallthrough -Wno-type-limits -Wno-uninitialized -Wno-array-bounds -Wmissing-declarations -Wredundant-decls -Wno-parentheses -Wwrite-strings -Wshadow -pedantic -Wuninitialized -Iutil -I. -isystem C:/msys64/mingw64/include/lua5.1 -isystem contrib/install/x86_64-w64-mingw32/include -DWIZARD -DASSERTS -DREGEX_PCRE -DCLUA_BINDINGS
+LDFLAGS: -O0 -march=native -O3
+>>>>>>>>>>>
+
+Place info:
+branch = 0, depth = 1
+
+Level id: D:1
+Level build method = ABSENT, level layout type  = ABSENT, absdepth0 = 0
+
+Markers:
+<<<<<<<<<<<<<<<<<<<<<<
+>>>>>>>>>>>>>>>>>>>>>>
+
+Messages:
+<<<<<<<<<<<<<<<<<<<<<<
+Data directory 'C:/msys64/home/Luke/crawl-curseless/server/dat/' found.
+Loading databases... Loading spells and features... Loading maps...
+Hello, welcome to Dungeon Crawl Stone Soup 0.33-a0-264-gded50e90a5!
+(c) Copyright 1997-2002 Linley Henzell, 2002-2023 Crawl DevTeam
+Options file not found; using defaults.
+
+>>>>>>>>>>>>>>>>>>>>>>
+
+Version history:
+No version history (current version is 0.33-a0-264-gded50e90a5)
+
+Game state:
+
+mouse_enabled: 0, waiting_for_command: 0, terminal_resized: 0
+io_inited: 1, need_save: 0, saving_game: 0, updating_scores: 0:
+seen_hups: 0, map_stat_gen: 0, type: 1, arena_suspended: 0
+
+prev_cmd = CMD_NO_CMD
+repeat_cmd = CMD_NO_CMD
+
+Player:
+{{{{{{{{{{{
+Name:    []
+Species: Yak
+Job:     Unemployed
+
+HP: 0/0; mods: 0/0
+MP: 0/0; mod: 0
+Stats: 0 (0) 0 (0) 0 (0)
+Position: (0, 0) <OoB>, god: No God (0), turn_is_over: 0, banished: 0
+
+Skills (mode: auto)
+Name            | can_currently_train | train | training | level | points | progress
+Fighting        |                     |   0   |     0    |    0  |      0 | 0/7
+Long Blades     |                     |   0   |     0    |    0  |      0 | 0/1
+Axes            |                     |   0   |     0    |    0  |      0 | 0/6
+Maces & Flails  |                     |   0   |     0    |    0  |      0 | 0/59
+Polearms        |                     |   0   |     0    |    0  |      0 | 0/1
+Staves          |                     |   0   |     0    |    0  |      0 | 0/5
+Ranged Weapons  |                     |   0   |     0    |    0  |      0 | 0/1
+Throwing        |                     |   0   |     0    |    0  |      0 | 0/50
+Armour          |                     |   0   |     0    |    0  |      0 | 0/1
+Dodging         |                     |   0   |     0    |    0  |      0 | 0/2
+Stealth         |                     |   0   |     0    |    0  |      0 | 0/50
+Shields         |                     |   0   |     0    |    0  |      0 | 0/2
+Unarmed Combat  |                     |   0   |     0    |    0  |      0 | 0/1
+Spellcasting    |                     |   0   |     0    |    0  |      0 | 0/1
+Conjurations    |                     |   0   |     0    |    0  |      0 | 0/50
+Hexes           |                     |   0   |     0    |    0  |      0 | 0/1
+Summonings      |                     |   0   |     0    |    0  |      0 | 0/59
+Necromancy      |                     |   0   |     0    |    0  |      0 | 0/1
+Translocations  |                     |   0   |     0    |    0  |      0 | 0/1
+Fire Magic      |                     |   0   |     0    |    0  |      0 | 0/1
+Ice Magic       |                     |   0   |     0    |    0  |      0 | 0/0
+Air Magic       |                     |   0   |     0    |    0  |      0 | 0/50
+Earth Magic     |                     |   0   |     0    |    0  |      0 | 0/1
+Alchemy         |                     |   0   |     0    |    0  |      0 | 0/0
+Invocations     |                     |   0   |     0    |    0  |      0 | 0/50
+Evocations      |                     |   0   |     0    |    0  |      0 | 0/1
+Shapeshifting   |                     |   0   |     0    |    0  |      0 | 0/0
+
+Spell bugs:
+
+Durations:
+
+Attributes:
+
+Mutations:
+
+Inventory bugs:
+
+Equipment:
+
+}}}}}}}}}}}
+
+
+Screenshot:
+@
+
+clua stack:
+
+
+dlua stack:
+
+
+Lua persistent data:
+<<<<<<<<<<<<<<<<<<<<<<
+>>>>>>>>>>>>>>>>>>>>>>
+
+Lua marker contents:
+<<<<<<<<<<<<<<<<<<<<<<
+>>>>>>>>>>>>>>>>>>>>>>
