@@ -6,6 +6,9 @@
 // Stuff for the server
 httplib::Server svr;
 
+// Whether to output everything or not
+const bool verbose = true;
+
 // Stuff for the process
 namespace bp = boost::process;
 std::string fullText = "";
@@ -18,6 +21,9 @@ std::vector<std::pair<int, std::string>> commandQueue;
 std::mutex readLock;
 std::mutex writeLock;
 std::mutex outputLock;
+std::string args = "";
+std::string lastNonTrivialOutput = "";
+bool nextGetOutputLast = false;
 
 // C++ entry point
 int main(int argc, const char * argv[]) {
@@ -26,7 +32,6 @@ int main(int argc, const char * argv[]) {
     svr.new_task_queue = [] {return new httplib::ThreadPool(8);};
 
     // Args list
-    std::string args = "";
    	args  = " -extra-opt-first monster_item_view_coordinates=true ";
 	args += " -extra-opt-first bad_item_prompt=false ";
 	args += " -extra-opt-first monster_item_view_features+=cloud ";
@@ -48,6 +53,16 @@ int main(int argc, const char * argv[]) {
     // On getting the index, we read as much as we can and output
     svr.Get("/get", [](const httplib::Request &, httplib::Response &res) {
 
+        // If we're just outputting the last
+        if (nextGetOutputLast && lastNonTrivialOutput.size() > 0) {
+            if (verbose) {
+                std::cout << "Sending last non-trivial output" << std::endl;
+            }
+            res.set_content(lastNonTrivialOutput, "text/plain");
+            nextGetOutputLast = false;
+            return;
+        }
+
         // Get the output from the process
         readLock.lock();
         fullText = "";
@@ -67,23 +82,31 @@ int main(int argc, const char * argv[]) {
         } else {
             fullText = "===CLOSED===";
         }
+        size_t startIndex = fullText.find("===START===");
+        size_t endIndex = fullText.find("===END===");
+        if (startIndex != std::string::npos && endIndex != std::string::npos && endIndex - startIndex > 10) {
+            lastNonTrivialOutput = fullText;
+        }
         readLock.unlock();
 
         // Return the full text
         res.set_content(fullText, "text/plain");
-        if (fullText.size() > 0) {
-            //outputLock.lock();
-            std::cout << "Client requested a get, sent " << fullText.size() << " chars" << std::endl;
-            //std::cout << fullText << std::endl;
-            //outputLock.unlock();
+        if (verbose) {
+            if (fullText.size() > 0) {
+                outputLock.lock();
+                std::cout << "Client requested a get, sent " << fullText.size() << " chars" << std::endl;
+                outputLock.unlock();
+            }
         }
 
         // Give a command if the queue is non-empty
         writeLock.lock();
         if (commandQueue.size() > 0 && commandQueue[0].first == nextCommand) {
-            //outputLock.lock();
-            std::cout << "Running command from queue: " << commandQueue[0].second << " (" << commandQueue[0].first << ")" << std::endl;
-            //outputLock.unlock();
+            if (verbose) {
+                outputLock.lock();
+                std::cout << "Running command from queue: " << commandQueue[0].second << " (" << commandQueue[0].first << ")" << std::endl;
+                outputLock.unlock();
+            }
             child_stdin << commandQueue[0].second << std::endl;
             child_stdin.flush();
             nextCommand++;
@@ -96,10 +119,12 @@ int main(int argc, const char * argv[]) {
 
     // For checking if the server is up
     svr.Get("/", [](const httplib::Request &, httplib::Response &res) {
-        std::cout << "Client requested a check" << std::endl;
+        if (verbose) {
+            std::cout << "Client requested a check" << std::endl;
+        }
         res.set_content("===SERVER===", "text/plain");
+        nextGetOutputLast = true;
         nextCommand = 0;
-        numNew = 0;
     });
 
     // On command
@@ -107,9 +132,11 @@ int main(int argc, const char * argv[]) {
 
         // Get the command
         auto command = req.path_params.at("command");
-        //outputLock.lock();
-        std::cout << "Client sent command: " << command << std::endl;
-        //outputLock.unlock();
+        if (verbose) {
+            outputLock.lock();
+            std::cout << "Client sent command: " << command << std::endl;
+            outputLock.unlock();
+        }
 
         // Get the number
         std::string commandText = "";

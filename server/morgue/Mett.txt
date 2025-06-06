@@ -1,0 +1,158 @@
+ Dungeon Crawl Stone Soup version 0.33-a0-264-gded50e90a5 (console) character file.
+
+Game seed: 11532270362353259236
+
+Mett the Ducker (Minotaur Gladiator)                  Turns: 19, Time: 00:00:41
+
+Health: 18/18      AC:  3    Str: 18    XL:     1   Next: 16%
+Magic:  0/0        EV: 11    Int:  5    God:    
+Gold:   0          SH:  0    Dex: 11    Spells: 0/0 levels left
+
+rFire   . . .        a - +0 rapier
+rCold   . . .        (no shield)
+rNeg    . . .        b - +0 leather armour
+rPois   .            c - +0 hat
+rElec   .            (no cloak)
+rCorr   .            (no gloves)
+SInv    .            (no boots)
+Will    .....        (no amulet)
+Stlth   +            (no ring)
+HPRegen 0.23/turn    (no ring)
+MPRegen 0.07/turn
+
+%: no passive effects
+@: no status effects
+A: horns 2, retaliatory headbutt
+a: no special abilities
+
+
+You are on level 1 of the Dungeon.
+You have visited 1 branch of the dungeon, and seen 1 of its levels.
+
+Inventory:
+
+Hand Weapons
+ a - a +0 rapier (weapon)
+Missiles
+ d - 3 throwing nets (quivered)
+ e - a javelin
+Armour
+ b - a +0 leather armour (worn)
+ c - a +0 hat (worn)
+
+
+   Skills:
+ + Level 2.4 Fighting
+ + Level 3.3 Short Blades
+ + Level 2.0 Throwing
+ + Level 3.3 Dodging
+
+
+You cannot memorise any spells.
+You don't know any spells.
+Your spell library is empty.
+
+Dungeon Overview and Level Annotations
+
+Branches:
+Dungeon (1/15)            
+
+Altars:
+
+
+Innate Abilities, Weirdness & Mutations
+
+You have a pair of horns on your head.
+You reflexively headbutt those who attack you in melee.
+
+Message History
+
+Welcome back, Mett the Minotaur Gladiator.
+Press ? for a list of commands and other information.
+Welcome back, Mett the Minotaur Gladiator.
+Press ? for a list of commands and other information.
+Welcome back, Mett the Minotaur Gladiator.
+Press ? for a list of commands and other information.
+Welcome back, Mett the Minotaur Gladiator.
+Press ? for a list of commands and other information.
+Welcome back, Mett the Minotaur Gladiator.
+Press ? for a list of commands and other information.
+Welcome back, Mett the Minotaur Gladiator.
+Press ? for a list of commands and other information.
+Welcome back, Mett the Minotaur Gladiator.
+Press ? for a list of commands and other information.
+Found a staircase leading out of the dungeon (here) .
+Unknown command.
+Unknown command.
+You have 0 gold pieces.
+Unknown command.
+WARNING: ABOUT TO ENTER WIZARD MODE!
+If you continue, your game will not be scored!
+Do you really want to enter wizard mode? (Confirm with "yes".) 
+Okay, then.
+You have 0 gold pieces.
+You have 0 gold pieces.
+You open the door.
+A giant cockroach comes into view.
+You hit the giant cockroach but do no damage.
+You headbutt the giant cockroach.
+You kill the giant cockroach!
+Found 15 gold pieces.
+There is an open door (here)  here.
+You open the door.
+There is an open door (here)  here.
+There is an open door (here)  here.
+There is an open door (here)  here.
+There is a staircase leading out of the dungeon (here)  here.
+Unknown command.
+Unknown command.
+Saving game... please wait.
+
+     #####
+     #P@.#
+     #...#
+###+###'##
+.........#
+##..$....+
+.........#
+###+###'##
+     #...#
+     #P..#
+
+
+You can see a fungus.
+
+Vanquished Creatures
+  A giant cockroach (D:1)
+1 creature vanquished.
+
+Notes
+Turn   | Place    | Note
+-------+----------+-------------------------------------------
+     0 | D:1      | Mett the Minotaur Gladiator began the quest for the Orb.
+     0 | D:1      | Reached XP level 1. HP: 18/18 MP: 0/0
+
+Illustrated notes
+
+Action                     || total
+---------------------------++-------
+  Melee: Rapier            ||     1
+         Headbutt          ||     1
+
+Table legend: (Time is in decaauts)
+ A = Elapsed time spent in this place.
+ B = Non-inter-level travel time spent in this place.
+ C = Inter-level travel time spent in this place.
+ D = Time resting spent in this place.
+ E = Time spent auto-exploring this place.
+ F = Levels seen in this place.
+ G = Mean time per level.
+                   A        B        C        D        E      F       G
+               +--------+--------+--------+--------+--------+-----+--------+
+         Total |     19 |     19 |      0 |      0 |      0 |   1 |   19.0 |
+       Dungeon |     19 |     19 |      0 |      0 |      0 |   1 |   19.0 |
+               +--------+--------+--------+--------+--------+-----+--------+
+
+Top non-repeatable levels by time:
+     D:1: 19 daAuts
+
