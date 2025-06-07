@@ -84,7 +84,7 @@ int main(int argc, const char * argv[]) {
         }
         size_t startIndex = fullText.find("===START===");
         size_t endIndex = fullText.find("===END===");
-        if (startIndex != std::string::npos && endIndex != std::string::npos && endIndex - startIndex > 10) {
+        if (startIndex != std::string::npos && endIndex != std::string::npos && endIndex - startIndex > 20) {
             lastNonTrivialOutput = fullText;
         }
         readLock.unlock();

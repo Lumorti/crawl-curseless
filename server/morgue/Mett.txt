@@ -2,7 +2,7 @@
 
 Game seed: 11532270362353259236
 
-Mett the Ducker (Minotaur Gladiator)                  Turns: 19, Time: 00:00:41
+Mett the Ducker (Minotaur Gladiator)                  Turns: 35, Time: 00:01:14
 
 Health: 18/18      AC:  3    Str: 18    XL:     1   Next: 16%
 Magic:  0/0        EV: 11    Int:  5    God:    
@@ -67,21 +67,9 @@ You reflexively headbutt those who attack you in melee.
 
 Message History
 
+Saving game... please wait.
 Welcome back, Mett the Minotaur Gladiator.
 Press ? for a list of commands and other information.
-Welcome back, Mett the Minotaur Gladiator.
-Press ? for a list of commands and other information.
-Welcome back, Mett the Minotaur Gladiator.
-Press ? for a list of commands and other information.
-Welcome back, Mett the Minotaur Gladiator.
-Press ? for a list of commands and other information.
-Welcome back, Mett the Minotaur Gladiator.
-Press ? for a list of commands and other information.
-Welcome back, Mett the Minotaur Gladiator.
-Press ? for a list of commands and other information.
-Welcome back, Mett the Minotaur Gladiator.
-Press ? for a list of commands and other information.
-Found a staircase leading out of the dungeon (here) .
 Unknown command.
 Unknown command.
 You have 0 gold pieces.
@@ -92,20 +80,32 @@ Do you really want to enter wizard mode? (Confirm with "yes".)
 Okay, then.
 You have 0 gold pieces.
 You have 0 gold pieces.
-You open the door.
-A giant cockroach comes into view.
-You hit the giant cockroach but do no damage.
-You headbutt the giant cockroach.
-You kill the giant cockroach!
-Found 15 gold pieces.
-There is an open door (here)  here.
-You open the door.
-There is an open door (here)  here.
-There is an open door (here)  here.
-There is an open door (here)  here.
-There is a staircase leading out of the dungeon (here)  here.
+Saving game... please wait.
+Welcome back, Mett the Minotaur Gladiator.
+Press ? for a list of commands and other information.
 Unknown command.
 Unknown command.
+You have 0 gold pieces.
+Unknown command.
+WARNING: ABOUT TO ENTER WIZARD MODE!
+If you continue, your game will not be scored!
+Do you really want to enter wizard mode? (Confirm with "yes".) 
+Okay, then.
+You have 0 gold pieces.
+You have 0 gold pieces.
+Saving game... please wait.
+Welcome back, Mett the Minotaur Gladiator.
+Press ? for a list of commands and other information.
+Unknown command.
+Unknown command.
+You have 0 gold pieces.
+Unknown command.
+WARNING: ABOUT TO ENTER WIZARD MODE!
+If you continue, your game will not be scored!
+Do you really want to enter wizard mode? (Confirm with "yes".) 
+Okay, then.
+You have 0 gold pieces.
+You have 0 gold pieces.
 Saving game... please wait.
 
      #####
@@ -149,10 +149,10 @@ Table legend: (Time is in decaauts)
  G = Mean time per level.
                    A        B        C        D        E      F       G
                +--------+--------+--------+--------+--------+-----+--------+
-         Total |     19 |     19 |      0 |      0 |      0 |   1 |   19.0 |
-       Dungeon |     19 |     19 |      0 |      0 |      0 |   1 |   19.0 |
+         Total |     35 |     35 |      0 |      0 |      0 |   1 |   35.0 |
+       Dungeon |     35 |     35 |      0 |      0 |      0 |   1 |   35.0 |
                +--------+--------+--------+--------+--------+-----+--------+
 
 Top non-repeatable levels by time:
-     D:1: 19 daAuts
+     D:1: 35 daAuts
 
