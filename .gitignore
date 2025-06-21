@@ -1,3 +1,6 @@
+server/morgue
+server/saves
+
 .cquery_cache/
 .DS_Store
 .vscode/
