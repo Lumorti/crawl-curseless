@@ -238,6 +238,7 @@ static int _get_key_from_curses()
     std::cout << "===READY===" << std::endl;
     std::string str;
     std::getline(std::cin, str);
+
     //switch (str)
     //{
         //case "up":

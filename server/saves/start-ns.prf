@@ -1,8 +1,0 @@
-type = normal
-name = Mett
-species = Minotaur
-background = Gladiator
-weapon = rapier
-fully_random = no
-default_manual_training = no
-quiver_menu_focus = false

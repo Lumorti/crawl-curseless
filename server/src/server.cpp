@@ -7,7 +7,7 @@
 httplib::Server svr;
 
 // Whether to output everything or not
-const bool verbose = true;
+bool verbose = false;
 
 // Stuff for the process
 namespace bp = boost::process;
@@ -28,6 +28,11 @@ bool nextGetOutputLast = false;
 // C++ entry point
 int main(int argc, const char * argv[]) {
 
+    // If any extra argument is given, enable verbose mode
+    if (argc > 1) {
+        verbose = true;
+    }
+
     // Disable multithreading
     svr.new_task_queue = [] {return new httplib::ThreadPool(8);};
 
@@ -44,6 +49,7 @@ int main(int argc, const char * argv[]) {
 	args += " -extra-opt-first monster_item_view_features+=translucent ";
 	args += " -extra-opt-first monster_item_view_features+=door ";
 	args += " -extra-opt-first monster_item_view_features+=gate ";
+	args += " -extra-opt-first default_autopickup=false ";
 	args += " -extra-opt-first wiz_mode=yes ";
 	args += " -extra-opt-first char_set=ascii ";
 
@@ -92,11 +98,9 @@ int main(int argc, const char * argv[]) {
         // Return the full text
         res.set_content(fullText, "text/plain");
         if (verbose) {
-            if (fullText.size() > 0) {
-                outputLock.lock();
-                std::cout << "Client requested a get, sent " << fullText.size() << " chars" << std::endl;
-                outputLock.unlock();
-            }
+            outputLock.lock();
+            std::cout << "Client requested a get, sent " << fullText.size() << " chars" << std::endl;
+            outputLock.unlock();
         }
 
         // Give a command if the queue is non-empty
